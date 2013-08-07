@@ -48,63 +48,63 @@ You have to start the app associated with the receiver HTML.</p>
 <p>Once you have the web socket connection open to the ChromeCast device, there are various commands that allow you to load and control media playback.</p>
 
 <p>The first message you have to deal with is a ping from the device: 
-<code>
+<blockquote>
 ["cm",{"type":"ping"}]
-</code>
+</blockquote>
 The client needs to respond with a "pong" on an interval that is specified with the web socket URL payload: 
-<code>
+<blockquote>
 ["cm",{"type":"pong"}]
-</code>
+</blockquote>
 </p>
 
 <p>To load a video use the following RAMP command:
-<code>
+<blockquote>
 ["ramp",{"title":"Video title","src":"http://some/url/to/a/video.mp4","type":"LOAD","cmd_id":0,"autoplay":true}]
-</code>
+</blockquote>
 </p>
 
 <p>The "cmd_id" parameter increments with each command sent from the client. The associated response from the ChromeCast device will have the same "cmd_id" value.</p>
 
 <p>You can use the following command to explicitly ask for status:
-<code>
+<blockquote>
 ["ramp",{"type":"INFO","cmd_id":1}]
-</code>
+</blockquote>
 </p>
 
 <p>However, during my testing the device automatically provided regular status responses during media playback to track the playback progress:
-<code>
+<blockquote>
 ["ramp",{"cmd_id":2,"type":"STATUS","status":{"event_sequence":7768, "state":2, "content_id":"http://some/url/to/a/video.mp4", "current_time":9.208321571350098, "duration":596.5013427734375, "volume":0.5, "muted":false, "time_progress":true, "title":"Video title"}}]
-</code>
+</blockquote>
 </p>
 
 <p>To stop the video:
-<code>
+<blockquote>
 ["ramp",{"type":"STOP","cmd_id":3}]
-</code>
+</blockquote>
 </p>
 
 <p>There doesn't appear to be a pause command. The stop commands actually pauses the video and the user will see a frozen video frame.</p>
 
 <p>To play the video again, you can just play from the current position:
-<code>
+<blockquote>
 ["ramp",{"type":"PLAY","cmd_id":4}]
-</code>
+</blockquote>
 </p>
 
 <p>Or you can start from another position like the beginning of the video:
-<code>
+<blockquote>
 ["ramp",{"position":0,"type":"PLAY","cmd_id":5}]
-</code>
+</blockquote>
 </p>
 
 <p>You can set the volume using the following command:
-<code>
+<blockquote>
 ["ramp",{"volume":0.5,"type":"VOLUME","cmd_id":6}]
-</code>
+</blockquote>
 </p>
 
 <p>Or mute the volume:
-<code>
+<blockquote>
 ["ramp",{"type":"VOLUME","cmd_id":7,"muted":true}]
-</code>
+</blockquote>
 </p>
