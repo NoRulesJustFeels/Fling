@@ -35,7 +35,8 @@ To play the video, a web server is created on port 8080 on your computer and you
 </p>
 
 <p>
-RAMP Protocol for ChromeCast Explained (unofficial):</br>
+RAMP Protocol for ChromeCast Explained (unofficial)
+===================================================
 Google is using a proprietary protocol called RAMP (Remote Application Media Protocol) to control media playback on a ChromeCast device.</p>
 
 <p>The RAMP commands are sent over a web socket connection to the ChromeCast device using JSON notation.
@@ -46,33 +47,64 @@ You have to start the app associated with the receiver HTML.</p>
 
 <p>Once you have the web socket connection open to the ChromeCast device, there are various commands that allow you to load and control media playback.</p>
 
-<p>The first message you have to deal with is a ping from the device: ["cm",{"type":"ping"}]</br>
-The client needs to respond with a "pong" on an interval that is specified with the web socket URL payload: ["cm",{"type":"pong"}]</p>
+<p>The first message you have to deal with is a ping from the device: 
+```
+["cm",{"type":"ping"}]
+```
+The client needs to respond with a "pong" on an interval that is specified with the web socket URL payload: 
+```
+["cm",{"type":"pong"}]
+```
+</p>
 
-<p>To load a video use the following RAMP command:</br>
-["ramp",{"title":"Video title","src":"http://some/url/to/a/video.mp4","type":"LOAD","cmd_id":0,"autoplay":true}]</p>
+<p>To load a video use the following RAMP command:
+```
+["ramp",{"title":"Video title","src":"http://some/url/to/a/video.mp4","type":"LOAD","cmd_id":0,"autoplay":true}]
+```
+</p>
 
 <p>The "cmd_id" parameter increments with each command sent from the client. The associated response from the ChromeCast device will have the same "cmd_id" value.</p>
 
-<p>You can use the following command to explicitly ask for status:</br>
-["ramp",{"type":"INFO","cmd_id":1}]</p>
+<p>You can use the following command to explicitly ask for status:
+```
+["ramp",{"type":"INFO","cmd_id":1}]
+```
+</p>
 
-<p>However, during my testing the device automatically provided regular status responses during media playback to track the playback progress:</br>
-["ramp",{"cmd_id":2,"type":"STATUS","status":{"event_sequence":7768, "state":2, "content_id":"http://some/url/to/a/video.mp4", "current_time":9.208321571350098, "duration":596.5013427734375, "volume":0.5, "muted":false, "time_progress":true, "title":"Video title"}}]</p>
+<p>However, during my testing the device automatically provided regular status responses during media playback to track the playback progress:
+```
+["ramp",{"cmd_id":2,"type":"STATUS","status":{"event_sequence":7768, "state":2, "content_id":"http://some/url/to/a/video.mp4", "current_time":9.208321571350098, "duration":596.5013427734375, "volume":0.5, "muted":false, "time_progress":true, "title":"Video title"}}]
+```
+</p>
 
-<p>To stop the video:</br>
-["ramp",{"type":"STOP","cmd_id":3}] </p>
+<p>To stop the video:
+```
+["ramp",{"type":"STOP","cmd_id":3}]
+```
+</p>
 
 <p>There doesn't appear to be a pause command. The stop commands actually pauses the video and the user will see a frozen video frame.</p>
 
-<p>To play the video again, you can just play from the current position:</br>
-["ramp",{"type":"PLAY","cmd_id":4}] </p>
+<p>To play the video again, you can just play from the current position:
+```
+["ramp",{"type":"PLAY","cmd_id":4}]
+```
+</p>
 
-<p>Or you can start from another position like the beginning of the video:</br>
-["ramp",{"position":0,"type":"PLAY","cmd_id":5}] </p>
+<p>Or you can start from another position like the beginning of the video:
+```
+["ramp",{"position":0,"type":"PLAY","cmd_id":5}]
+```
+</p>
 
-<p>You can set the volume using the following command: </br>
-["ramp",{"volume":0.5,"type":"VOLUME","cmd_id":6}]</p>
+<p>You can set the volume using the following command:
+```
+["ramp",{"volume":0.5,"type":"VOLUME","cmd_id":6}]
+```
+</p>
 
-<p>Or mute the volume:</br>
-["ramp",{"type":"VOLUME","cmd_id":7,"muted":true}] </p>
+<p>Or mute the volume:
+```
+["ramp",{"type":"VOLUME","cmd_id":7,"muted":true}]
+```
+</p>
