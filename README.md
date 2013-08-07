@@ -35,7 +35,7 @@ To play the video, a web server is created on port 8080 on your computer and you
 </p>
 
 <p>
-RAMP Protocol for ChromeCast Explained (unofficial):
+<h2>RAMP Protocol for ChromeCast Explained (unofficial):</h2>
 
 Google is using a proprietary protocol called RAMP (Remote Application Media Protocol) to control media playback on a ChromeCast device.</p>
 
@@ -48,63 +48,63 @@ You have to start the app associated with the receiver HTML.</p>
 <p>Once you have the web socket connection open to the ChromeCast device, there are various commands that allow you to load and control media playback.</p>
 
 <p>The first message you have to deal with is a ping from the device: 
-
+<code>
 ["cm",{"type":"ping"}]
-
+</code>
 The client needs to respond with a "pong" on an interval that is specified with the web socket URL payload: 
-
+<code>
 ["cm",{"type":"pong"}]
-
+</code>
 </p>
 
 <p>To load a video use the following RAMP command:
-
+<code>
 ["ramp",{"title":"Video title","src":"http://some/url/to/a/video.mp4","type":"LOAD","cmd_id":0,"autoplay":true}]
-
+</code>
 </p>
 
 <p>The "cmd_id" parameter increments with each command sent from the client. The associated response from the ChromeCast device will have the same "cmd_id" value.</p>
 
 <p>You can use the following command to explicitly ask for status:
-
+<code>
 ["ramp",{"type":"INFO","cmd_id":1}]
-
+</code>
 </p>
 
 <p>However, during my testing the device automatically provided regular status responses during media playback to track the playback progress:
-
+<code>
 ["ramp",{"cmd_id":2,"type":"STATUS","status":{"event_sequence":7768, "state":2, "content_id":"http://some/url/to/a/video.mp4", "current_time":9.208321571350098, "duration":596.5013427734375, "volume":0.5, "muted":false, "time_progress":true, "title":"Video title"}}]
-
+</code>
 </p>
 
 <p>To stop the video:
-
+<code>
 ["ramp",{"type":"STOP","cmd_id":3}]
-
+</code>
 </p>
 
 <p>There doesn't appear to be a pause command. The stop commands actually pauses the video and the user will see a frozen video frame.</p>
 
 <p>To play the video again, you can just play from the current position:
-
+<code>
 ["ramp",{"type":"PLAY","cmd_id":4}]
-
+</code>
 </p>
 
 <p>Or you can start from another position like the beginning of the video:
-
+<code>
 ["ramp",{"position":0,"type":"PLAY","cmd_id":5}]
-
+</code>
 </p>
 
 <p>You can set the volume using the following command:
-
+<code>
 ["ramp",{"volume":0.5,"type":"VOLUME","cmd_id":6}]
-
+</code>
 </p>
 
 <p>Or mute the volume:
-
+<code>
 ["ramp",{"type":"VOLUME","cmd_id":7,"muted":true}]
-
+</code>
 </p>
