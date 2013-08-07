@@ -108,3 +108,4 @@ The client needs to respond with a "pong" on an interval that is specified with 
 ["ramp",{"type":"VOLUME","cmd_id":7,"muted":true}]
 </blockquote>
 </p>
+
