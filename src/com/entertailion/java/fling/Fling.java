@@ -18,6 +18,12 @@ import java.net.URL;
 
 import javax.swing.WindowConstants;
 
+//import uk.co.caprica.vlcj.binding.LibVlc;
+import uk.co.caprica.vlcj.runtime.RuntimeUtil;
+
+import com.sun.jna.Native;
+import com.sun.jna.NativeLibrary;
+
 /**
  * Main class for Fling app. Fling media to ChromeCast devices using RAMP
  * protocol
@@ -36,6 +42,28 @@ public class Fling {
 	 * @param args
 	 */
 	public static void main(String[] args) {
+		// http://www.capricasoftware.co.uk/projects/vlcj/index.html
+		try {
+			System.out.println(System.getProperty("os.name"));
+			if (System.getProperty("os.name").startsWith("Mac")) {
+				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(),"/Applications/VLC.app/Contents/MacOS/lib");
+				Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
+				
+			} else if (System.getProperty("os.name").startsWith("Windows")) {
+				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(), "C:/Program Files/VideoLAN/VLC");
+			    Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
+			} else {
+				Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
+			}
+		} catch (Throwable ex) {
+			// Try for other OS's
+			try {
+				Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
+			} catch (Throwable ex2) {
+				System.out.println("VLC not available");
+			}
+		}
+		
 		EventQueue.invokeLater(new Runnable() {
 			@Override
 			public void run() {

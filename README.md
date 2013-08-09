@@ -11,8 +11,15 @@ There is a dependency on a web app that needs to be <a href="https://developers.
 <p>When the application starts, it will search for ChromeCast devices on your local network. Select the device that you want to beam the videos to.
 Then drag-and-drop a video file onto the application to beam it to the ChromeCast device.</p>
 
-<p>Playback is limited to the <a href="https://developers.google.com/cast/supported_media_types">video formats supported by ChromeCast</a>.
-Fling does not do any conversions of the video.</p>
+<p>ChromeCast devices only support a very limited number of <a href="https://developers.google.com/cast/supported_media_types">media formats</a>.
+Fling has experimental support for converting other media formats into <a href="http://en.wikipedia.org/wiki/WebM">WebM</a> using <a href="http://www.videolan.org/index.html">VLC</a>. 
+You need to <a href="http://www.videolan.org/vlc/#download">download</a> and install VLC for your computer. Click on the Fling Settings button to configure which file formats to convert and
+to configure the <a href="http://www.videolan.org/doc/videolan-howto/en/ch09.html">VLC transcoding parameters</a>. By default Fling uses the following VLC transcoding parameters:
+<blockquote>
+:sout=#transcode{vcodec=VP80,vb=1000,width=500,acodec=vorb,ab=128,channels=2,samplerate=44100} :http{mux=webm,dst=:8087/cast.webm} :sout-keep
+</blockquote>
+<b>Note that converting video is very CPU intensive. It might take several seconds for the video to start playing on your ChromeCast device.</b>.
+</p>
 
 <p>There are basic playback controls to play, pause and stop the video (pause and stop behaves the same).</p>
 
