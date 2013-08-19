@@ -5,8 +5,11 @@ Fling
 
 <p>The Fling application allows you to beam video files from computers to <a href="https://www.google.com/intl/en/chrome/devices/chromecast/">ChromeCast</a> devices.</p>
 
-<p>To run the application, you need a <a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">Java runtime environment (JRE)</a> for your operating system. 
-There is a dependency on a web app that needs to be <a href="https://developers.google.com/cast/whitelisting#whitelist-receiver">registered with Google</a>, so currently this solution will only work for developers until Google opens up their ChromeCast developer program.</p>
+<p>To run the application, you need a <a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">Java runtime environment (JRE)</a> for your operating system. </p>
+
+<p>Download the latest version of the app: <a href="http://goo.gl/HAc9ex">fling.jar</a></p>
+
+<p>There is no longer a dependency on a web app that needs to be <a href="https://developers.google.com/cast/whitelisting#whitelist-receiver">registered with Google</a>; that has been eliminated by using the public ChromeCast app receiver.</p>
 
 <p>When the application starts, it will search for ChromeCast devices on your local network. Select the device that you want to beam the videos to.
 Then drag-and-drop a video file onto the application to beam it to the ChromeCast device.</p>
@@ -18,7 +21,7 @@ to configure the <a href="http://www.videolan.org/doc/videolan-howto/en/ch09.htm
 <blockquote>
 :sout=#transcode{vcodec=VP80,vb=1000,width=500,acodec=vorb,ab=128,channels=2,samplerate=44100} :http{mux=webm,dst=:8087/cast.webm} :sout-keep
 </blockquote>
-<b>Note that converting video is very CPU intensive. It might take several seconds for the video to start playing on your ChromeCast device.</b>.
+<b>Note that converting video is very CPU intensive. It might take several seconds for the video to start playing on your ChromeCast device</b>.
 </p>
 
 <p>There are basic playback controls to play, pause and stop the video (pause and stop behaves the same).</p>

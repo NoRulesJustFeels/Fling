@@ -67,7 +67,10 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	private static final String LOG_TAG = "FlingFrame";
 
 	// TODO Add your own app id here
-	private static final String APP_ID = "YOUR_APP_ID_HERE";
+	public static final String CHROMECAST = "ChromeCast";
+	private static final String APP_ID = CHROMECAST; // use the public receiver;
+														// change to your app id
+														// if Google blocks this
 
 	private static final String HEADER_APPLICATION_URL = "Application-URL";
 	private static final String CHROME_CAST_MODEL_NAME = "Eureka Dongle";
@@ -93,6 +96,8 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 
 	private String transcodingParameterValues = TRANSCODING_PARAMETERS;
 	private String transcodingExtensionValues = TRANSCODING_EXTENSIONS;
+
+	private DialServer selectedDialServer;
 
 	public FlingFrame() {
 		super();
@@ -449,9 +454,13 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		int pos = cb.getSelectedIndex();
 		// when device is selected, attempt to connect
 		if (servers != null && pos > 0) {
-			final DialServer dialServer = servers.get(pos - 1);
-
-			rampClient.launchApp(APP_ID, dialServer);
+			selectedDialServer = servers.get(pos - 1);
+			if (APP_ID.equals(FlingFrame.CHROMECAST)) {
+				// Don't launch ChromeCast app now; there is a timeout that will
+				// close the app if the media request isn't sent quickly
+			} else {
+				rampClient.launchApp(APP_ID, selectedDialServer);
+			}
 		}
 	}
 
@@ -465,7 +474,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		if (file != null) {
 			boolean found = false;
 			String[] extensions = transcodingExtensionValues.split(",");
-			for(String extension:extensions) {
+			for (String extension : extensions) {
 				if (file.endsWith(extension)) {
 					found = true;
 					break;
@@ -478,9 +487,30 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 					if (pos > -1) {
 						extension = file.substring(pos);
 					}
-					String url = "http://" + getNetworAddress().getHostAddress() + ":" + port + "/video" + extension;
-					rampClient.stop();
-					rampClient.load(url);
+					final String url = "http://" + getNetworAddress().getHostAddress() + ":" + port + "/video" + extension;
+					if (!rampClient.isClosed()) {
+						rampClient.stop();
+					}
+					if (APP_ID.equals(FlingFrame.CHROMECAST)) {
+						rampClient.launchApp(APP_ID, selectedDialServer);
+						// wait for socket to be ready...
+						new Thread(new Runnable() {
+							public void run() {
+								while (!rampClient.isStarted() && !rampClient.isClosed()) {
+									try {
+										Thread.sleep(500); // make less than 3
+															// second ping time
+									} catch (InterruptedException e) {
+									}
+								}
+								if (!rampClient.isClosed()) {
+									rampClient.load(url);
+								}
+							}
+						}).start();
+					} else {
+						rampClient.load(url);
+					}
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -509,9 +539,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 			});
 
 			// Play a particular item, with options if necessary
-			String options[] = {
-					":sout=#transcode{"+transcodingParameterValues+"}:http{mux=webm,dst=:8087/cast.webm}",
-					":sout-keep" };
+			String options[] = { ":sout=#transcode{" + transcodingParameterValues + "}:http{mux=webm,dst=:8087/cast.webm}", ":sout-keep" };
 			mediaPlayer.playMedia(file, options);
 
 			// http://192.168.0.8:8087/cast.webm
@@ -531,6 +559,12 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 			transcodingParameterValues = prop.getProperty(PROPERTY_TRANSCODING_PARAMETERS);
 			transcodingExtensionValues = prop.getProperty(PROPERTY_TRANSCODING_EXTENSIONS);
 		} catch (Exception ex) {
+		}
+		if (transcodingParameterValues == null) {
+			transcodingParameterValues = TRANSCODING_PARAMETERS;
+		}
+		if (transcodingExtensionValues == null) {
+			transcodingExtensionValues = TRANSCODING_EXTENSIONS;
 		}
 		return prop;
 	}

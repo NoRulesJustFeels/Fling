@@ -17,6 +17,7 @@ package com.entertailion.java.fling;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.URI;
+import java.util.UUID;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -33,7 +34,6 @@ import org.apache.http.impl.client.DefaultRedirectHandler;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
-import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -75,27 +75,30 @@ public class RampClient implements RampWebSocketListener {
 	private String protocol;
 	private String response;
 	private boolean started;
+	private boolean closed;
 
 	private RampWebSocketClient rampWebSocketClient;
 	private int commandId;
+	private String app;
+	private String activityId;
+	private String senderId;
 
 	public RampClient() {
-
+		this.senderId = UUID.randomUUID().toString();
 	}
 
 	public void launchApp(String app, DialServer dialServer) {
+		this.app = app;
+		this.activityId = UUID.randomUUID().toString();
 		try {
-			String device = "http://"
-					+ dialServer.getIpAddress().getHostAddress() + ":"
-					+ dialServer.getPort();
+			String device = "http://" + dialServer.getIpAddress().getHostAddress() + ":" + dialServer.getPort();
 			Log.d(LOG_TAG, "device=" + device);
 			Log.d(LOG_TAG, "apps url=" + dialServer.getAppsUrl());
 
 			// application instance url
 			String location = null;
 
-			DefaultHttpClient defaultHttpClient = HttpRequestHelper
-					.createHttpClient();
+			DefaultHttpClient defaultHttpClient = HttpRequestHelper.createHttpClient();
 			CustomRedirectHandler handler = new CustomRedirectHandler();
 			defaultHttpClient.setRedirectHandler(handler);
 			BasicHttpContext localContext = new BasicHttpContext();
@@ -106,15 +109,12 @@ public class RampClient implements RampWebSocketListener {
 			httpGet.setHeader(HEADER_USER_AGENT, HEADER_USER_AGENT_VALUE);
 			httpGet.setHeader(HEADER_ACCEPT, HEADER_ACCEPT_VALUE);
 			httpGet.setHeader(HEADER_DNT, HEADER_DNT_VALUE);
-			httpGet.setHeader(HEADER_ACCEPT_ENCODING,
-					HEADER_ACCEPT_ENCODING_VALUE);
-			httpGet.setHeader(HEADER_ACCEPT_LANGUAGE,
-					HEADER_ACCEPT_LANGUAGE_VALUE);
+			httpGet.setHeader(HEADER_ACCEPT_ENCODING, HEADER_ACCEPT_ENCODING_VALUE);
+			httpGet.setHeader(HEADER_ACCEPT_LANGUAGE, HEADER_ACCEPT_LANGUAGE_VALUE);
 			HttpResponse httpResponse = defaultHttpClient.execute(httpGet);
 			if (httpResponse != null) {
 				int responseCode = httpResponse.getStatusLine().getStatusCode();
-				Log.d(LOG_TAG, "get response code="
-						+ httpResponse.getStatusLine().getStatusCode());
+				Log.d(LOG_TAG, "get response code=" + httpResponse.getStatusLine().getStatusCode());
 				if (responseCode == 204) {
 					// nothing is running
 				} else if (responseCode == 200) {
@@ -128,26 +128,21 @@ public class RampClient implements RampWebSocketListener {
 						Log.d(LOG_TAG, "lastUrl=" + lastUrl);
 					}
 
-					String response = EntityUtils.toString(httpResponse
-							.getEntity());
+					String response = EntityUtils.toString(httpResponse.getEntity());
 					Log.d(LOG_TAG, "get response=" + response);
 					parseXml(new StringReader(response));
 
 					Header[] headers = httpResponse.getAllHeaders();
 					for (int i = 0; i < headers.length; i++) {
-						Log.d(LOG_TAG,
-								headers[i].getName() + "="
-										+ headers[i].getValue());
+						Log.d(LOG_TAG, headers[i].getName() + "=" + headers[i].getValue());
 					}
 
 					// stop the app instance
 					HttpDelete httpDelete = new HttpDelete(lastUrl);
 					httpResponse = defaultHttpClient.execute(httpDelete);
 					if (httpResponse != null) {
-						Log.d(LOG_TAG, "delete response code="
-								+ httpResponse.getStatusLine().getStatusCode());
-						response = EntityUtils.toString(httpResponse
-								.getEntity());
+						Log.d(LOG_TAG, "delete response code=" + httpResponse.getStatusLine().getStatusCode());
+						response = EntityUtils.toString(httpResponse.getEntity());
 						Log.d(LOG_TAG, "delete response=" + response);
 					} else {
 						Log.d(LOG_TAG, "no delete response");
@@ -160,8 +155,7 @@ public class RampClient implements RampWebSocketListener {
 			}
 
 			// Check if app is installed on device
-			int responseCode = getAppStatus(defaultHttpClient,
-					dialServer.getAppsUrl() + app);
+			int responseCode = getAppStatus(defaultHttpClient, dialServer.getAppsUrl() + app);
 			if (responseCode != 200) {
 				return;
 			}
@@ -174,18 +168,17 @@ public class RampClient implements RampWebSocketListener {
 			httpPost.setHeader(HEADER_ORIGN, HEADER_ORIGIN_VALUE);
 			httpPost.setHeader(HEADER_USER_AGENT, HEADER_USER_AGENT_VALUE);
 			httpPost.setHeader(HEADER_DNT, HEADER_DNT_VALUE);
-			httpPost.setHeader(HEADER_ACCEPT_ENCODING,
-					HEADER_ACCEPT_ENCODING_VALUE);
+			httpPost.setHeader(HEADER_ACCEPT_ENCODING, HEADER_ACCEPT_ENCODING_VALUE);
 			httpPost.setHeader(HEADER_ACCEPT, HEADER_ACCEPT_VALUE);
-			httpPost.setHeader(HEADER_ACCEPT_LANGUAGE,
-					HEADER_ACCEPT_LANGUAGE_VALUE);
-			httpPost.setHeader(HEADER_CONTENT_TYPE,
-					HEADER_CONTENT_TYPE_TEXT_VALUE);
+			httpPost.setHeader(HEADER_ACCEPT_LANGUAGE, HEADER_ACCEPT_LANGUAGE_VALUE);
+			httpPost.setHeader(HEADER_CONTENT_TYPE, HEADER_CONTENT_TYPE_TEXT_VALUE);
+			if (app.equals(FlingFrame.CHROMECAST)) {
+				httpPost.setEntity(new StringEntity("v=release-d4fa0a24f89ec5ba83f7bf3324282c8d046bf612&id=local%3A1&idle=windowclose"));
+			}
 
 			httpResponse = defaultHttpClient.execute(httpPost, localContext);
 			if (httpResponse != null) {
-				Log.d(LOG_TAG, "post response code="
-						+ httpResponse.getStatusLine().getStatusCode());
+				Log.d(LOG_TAG, "post response code=" + httpResponse.getStatusLine().getStatusCode());
 				response = EntityUtils.toString(httpResponse.getEntity());
 				Log.d(LOG_TAG, "post response=" + response);
 				Header[] headers = httpResponse.getHeaders("LOCATION");
@@ -196,8 +189,7 @@ public class RampClient implements RampWebSocketListener {
 
 				headers = httpResponse.getAllHeaders();
 				for (int i = 0; i < headers.length; i++) {
-					Log.d(LOG_TAG,
-							headers[i].getName() + "=" + headers[i].getValue());
+					Log.d(LOG_TAG, headers[i].getName() + "=" + headers[i].getValue());
 				}
 			} else {
 				Log.i(LOG_TAG, "no post response");
@@ -208,8 +200,7 @@ public class RampClient implements RampWebSocketListener {
 			// connection service URL is available
 			state = STATE_STOPPED;
 			do {
-				responseCode = getAppStatus(defaultHttpClient,
-						dialServer.getAppsUrl() + app);
+				responseCode = getAppStatus(defaultHttpClient, dialServer.getAppsUrl() + app);
 				if (responseCode != 200) {
 					break;
 				}
@@ -221,8 +212,7 @@ public class RampClient implements RampWebSocketListener {
 					Thread.sleep(1000);
 				} catch (Exception e) {
 				}
-			} while (state.equals(STATE_RUNNING)
-					&& connectionServiceUrl == null);
+			} while (state.equals(STATE_RUNNING) && connectionServiceUrl == null);
 
 			if (connectionServiceUrl == null) {
 				Log.i(LOG_TAG, "connectionServiceUrl is null");
@@ -236,16 +226,11 @@ public class RampClient implements RampWebSocketListener {
 			httpPost.setHeader(HEADER_ORIGN, HEADER_ORIGIN_VALUE);
 			httpPost.setHeader(HEADER_USER_AGENT, HEADER_USER_AGENT_VALUE);
 			httpPost.setHeader(HEADER_DNT, HEADER_DNT_VALUE);
-			httpPost.setHeader(HEADER_ACCEPT_ENCODING,
-					HEADER_ACCEPT_ENCODING_VALUE);
+			httpPost.setHeader(HEADER_ACCEPT_ENCODING, HEADER_ACCEPT_ENCODING_VALUE);
 			httpPost.setHeader(HEADER_ACCEPT, HEADER_ACCEPT_VALUE);
-			httpPost.setHeader(HEADER_ACCEPT_LANGUAGE,
-					HEADER_ACCEPT_LANGUAGE_VALUE);
-			httpPost.setHeader(HEADER_CONTENT_TYPE,
-					HEADER_CONTENT_TYPE_JSON_VALUE);
-			httpPost.setEntity(new StringEntity(
-					"{\"channel\":0,\"senderId\":{\"appName\":\"" + app
-							+ "\", \"senderId\":\"7v3zqrpliq3i\"}}"));
+			httpPost.setHeader(HEADER_ACCEPT_LANGUAGE, HEADER_ACCEPT_LANGUAGE_VALUE);
+			httpPost.setHeader(HEADER_CONTENT_TYPE, HEADER_CONTENT_TYPE_JSON_VALUE);
+			httpPost.setEntity(new StringEntity("{\"channel\":0,\"senderId\":{\"appName\":\"" + app + "\", \"senderId\":\"" + senderId + "\"}}"));
 
 			httpResponse = defaultHttpClient.execute(httpPost, localContext);
 			if (httpResponse != null) {
@@ -257,9 +242,7 @@ public class RampClient implements RampWebSocketListener {
 					Log.d(LOG_TAG, "post response=" + response);
 					Header[] headers = httpResponse.getAllHeaders();
 					for (int i = 0; i < headers.length; i++) {
-						Log.d(LOG_TAG,
-								headers[i].getName() + "="
-										+ headers[i].getValue());
+						Log.d(LOG_TAG, headers[i].getName() + "=" + headers[i].getValue());
 					}
 
 					// http://code.google.com/p/json-simple/
@@ -269,8 +252,7 @@ public class RampClient implements RampWebSocketListener {
 						JSONObject jsonObject = (JSONObject) obj;
 						webSocketAddress = (String) jsonObject.get("URL");
 						Log.d(LOG_TAG, "webSocketAddress: " + webSocketAddress);
-						long pingInterval = (Long) jsonObject
-								.get("pingInterval"); // TODO
+						long pingInterval = (Long) jsonObject.get("pingInterval"); // TODO
 					} catch (Exception e) {
 						Log.e(LOG_TAG, "parse JSON", e);
 					}
@@ -282,6 +264,8 @@ public class RampClient implements RampWebSocketListener {
 
 			// Make a web socket connection for doing RAMP
 			// to control media playback
+			this.started = false;
+			this.closed = false;
 			if (webSocketAddress != null) {
 				// https://github.com/TooTallNate/Java-WebSocket
 				URI uri = URI.create(webSocketAddress);
@@ -366,15 +350,13 @@ public class RampClient implements RampWebSocketListener {
 		public URI lastRedirectedUri;
 
 		@Override
-		public boolean isRedirectRequested(HttpResponse response,
-				HttpContext context) {
+		public boolean isRedirectRequested(HttpResponse response, HttpContext context) {
 
 			return super.isRedirectRequested(response, context);
 		}
 
 		@Override
-		public URI getLocationURI(HttpResponse response, HttpContext context)
-				throws ProtocolException {
+		public URI getLocationURI(HttpResponse response, HttpContext context) throws ProtocolException {
 
 			lastRedirectedUri = super.getLocationURI(response, context);
 
@@ -394,51 +376,70 @@ public class RampClient implements RampWebSocketListener {
 	public void onError(Exception ex) {
 		Log.d(LOG_TAG, "onError: ex" + ex);
 		ex.printStackTrace();
+
+		started = false;
+		closed = true;
 	}
 
 	public void onOpen(ServerHandshake handshake) {
 		Log.d(LOG_TAG, "onOpen: handshake" + handshake);
+
+		started = true;
+		closed = false;
 	}
 
 	public void onClose(int code, String reason, boolean remote) {
-		Log.d(LOG_TAG, "onClose: code" + code + ", reason=" + reason
-				+ ", remote=" + remote);
+		Log.d(LOG_TAG, "onClose: code" + code + ", reason=" + reason + ", remote=" + remote);
+
+		closed = true;
+		started = false;
 	}
 
+	// Media playback controls
 	public void play() {
 		if (rampWebSocketClient != null) {
-			rampWebSocketClient
-					.send("[\"ramp\",{\"type\":\"PLAY\", \"cmd_id\":"
-							+ commandId + "}]");
+			rampWebSocketClient.send("[\"ramp\",{\"type\":\"PLAY\", \"cmd_id\":" + commandId + "}]");
 			commandId++;
 		}
 	}
 
 	public void pause() {
 		if (rampWebSocketClient != null) {
-			rampWebSocketClient
-					.send("[\"ramp\",{\"type\":\"STOP\", \"cmd_id\":"
-							+ commandId + "}]");
+			rampWebSocketClient.send("[\"ramp\",{\"type\":\"STOP\", \"cmd_id\":" + commandId + "}]");
 			commandId++;
 		}
 	}
 
 	public void stop() {
 		if (rampWebSocketClient != null) {
-			rampWebSocketClient
-					.send("[\"ramp\",{\"type\":\"STOP\", \"cmd_id\":"
-							+ commandId + "}]");
+			rampWebSocketClient.send("[\"ramp\",{\"type\":\"STOP\", \"cmd_id\":" + commandId + "}]");
 			commandId++;
 		}
 	}
 
+	// Load media
 	public void load(String url) {
 		if (rampWebSocketClient != null) {
-			rampWebSocketClient
-					.send("[\"ramp\",{\"title\":\"Video\",\"src\":\"" + url
-							+ "\",\"type\":\"LOAD\",\"cmd_id\":" + commandId
-							+ ",\"autoplay\":true}]");
+			if (app.equals(FlingFrame.CHROMECAST)) {
+				rampWebSocketClient
+						.send("[\"cv\",{\"type\":\"launch_service\",\"message\":{\"action\":\"launch\",\"activityType\":\"video_playback\",\"activityId\":\""
+								+ activityId + "\",\"senderId\":\"" + senderId
+								+ "\",\"receiverId\":\"local:1\",\"disconnectPolicy\":\"continue\",\"initParams\":{\"mediaUrl\":\"" + url
+								+ "\",\"videoUrl\":\"" + url + "\",\"currentTime\":0,\"duration\":0,\"pause\":false,\"muted\":false,\"volume\":1}}}]");
+			} else {
+				rampWebSocketClient.send("[\"ramp\",{\"title\":\"Video\",\"src\":\"" + url + "\",\"type\":\"LOAD\",\"cmd_id\":" + commandId
+						+ ",\"autoplay\":true}]");
+			}
 			commandId++;
 		}
+	}
+
+	// Web socket status
+	public boolean isStarted() {
+		return started;
+	}
+
+	public boolean isClosed() {
+		return closed;
 	}
 }
