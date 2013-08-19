@@ -29,7 +29,7 @@ to configure the <a href="http://www.videolan.org/doc/videolan-howto/en/ch09.htm
 <p>The computer running the Fling application needs to be on the same network as the ChromeCast device. 
 To play the video, a web server is created on port 8080 on your computer and you might have to configure your firewall to allow incoming connections to access the video.</p>
 
-<p>Note for developers: You need to put your own app ID in the FlingFrame.java and receiver index.html files. Also, take a look a the <a href="https://github.com/entertailion/DIAL">DIAL Android app</a> which also discovers ChromeCast devices and supports YouTube videos.</p>
+<p>Note for developers: If you want to use your own receiver, you need to put your own app ID in the FlingFrame.java and receiver index.html files. Also, take a look a the <a href="https://github.com/entertailion/DIAL">DIAL Android app</a> which also discovers ChromeCast devices and supports YouTube videos.</p>
 
 <p>Watch this <a href="http://youtu.be/fehncl0nTAE">video</a> to see the application in action.</p>
 
