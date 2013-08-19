@@ -26,13 +26,16 @@ import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.ResourceBundle;
+import java.util.TimeZone;
 
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -83,13 +86,14 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	private JComboBox deviceList;
 	private JDialog progressDialog;
 	private JButton refreshButton, playButton, pauseButton, stopButton, settingsButton;
+	private JLabel label;
 	private ResourceBundle resourceBundle;
 	private EmbeddedServer embeddedServer;
 
 	private BroadcastDiscoveryClient broadcastClient;
 	private Thread broadcastClientThread;
 	private TrackedDialServers trackedServers = new TrackedDialServers();
-	private RampClient rampClient = new RampClient();
+	private RampClient rampClient;
 
 	private MediaPlayerFactory mediaPlayerFactory;
 	private MediaPlayer mediaPlayer;
@@ -101,6 +105,8 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 
 	public FlingFrame() {
 		super();
+
+		rampClient = new RampClient(this);
 
 		Locale locale = Locale.getDefault();
 		resourceBundle = ResourceBundle.getBundle("com/entertailion/java/fling/resources/resources", locale);
@@ -165,6 +171,8 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		// panel of playback buttons
 		JPanel buttonPane = new JPanel();
 		buttonPane.setLayout(new BoxLayout(buttonPane, BoxLayout.LINE_AXIS));
+		label = new JLabel("00:00:00");
+		buttonPane.add(label);
 		url = ClassLoader.getSystemResource("com/entertailion/java/fling/resources/play.png");
 		icon = new ImageIcon(url, resourceBundle.getString("button.play"));
 		playButton = new JButton(icon);
@@ -598,6 +606,13 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 			prop.store(new FileOutputStream("config.properties"), null);
 		} catch (Exception ex) {
 		}
+	}
+
+	public void updateTime(int time) {
+		SimpleDateFormat simpleDateFormat = new SimpleDateFormat("HH:mm:ss");
+		simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+		String format = simpleDateFormat.format(new Date(time * 1000));
+		label.setText(format);
 	}
 
 }

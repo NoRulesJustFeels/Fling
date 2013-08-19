@@ -17,7 +17,6 @@ package com.entertailion.java.fling;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.URI;
-import java.nio.channels.NotYetConnectedException;
 import java.util.UUID;
 
 import javax.xml.parsers.SAXParser;
@@ -83,15 +82,19 @@ public class RampClient implements RampWebSocketListener {
 	private String app;
 	private String activityId;
 	private String senderId;
-	
-	private Thread pongThread;
 
-	public RampClient() {
+	private Thread pongThread;
+	private DialServer dialServer;
+	private FlingFrame flingFrame;
+
+	public RampClient(FlingFrame flingFrame) {
+		this.flingFrame = flingFrame;
 		this.senderId = UUID.randomUUID().toString();
 	}
 
 	public void launchApp(String app, DialServer dialServer) {
 		this.app = app;
+		this.dialServer = dialServer;
 		this.activityId = UUID.randomUUID().toString();
 		try {
 			String device = "http://" + dialServer.getIpAddress().getHostAddress() + ":" + dialServer.getPort();
@@ -293,7 +296,69 @@ public class RampClient implements RampWebSocketListener {
 			}
 
 		} catch (Exception e) {
-			Log.e(LOG_TAG, "run", e);
+			Log.e(LOG_TAG, "launchApp", e);
+		}
+	}
+
+	public void closeCurrentApp() {
+		try {
+			DefaultHttpClient defaultHttpClient = HttpRequestHelper.createHttpClient();
+			CustomRedirectHandler handler = new CustomRedirectHandler();
+			defaultHttpClient.setRedirectHandler(handler);
+			BasicHttpContext localContext = new BasicHttpContext();
+
+			// check if any app is running
+			HttpGet httpGet = new HttpGet(dialServer.getAppsUrl());
+			httpGet.setHeader(HEADER_CONNECTION, HEADER_CONNECTION_VALUE);
+			httpGet.setHeader(HEADER_USER_AGENT, HEADER_USER_AGENT_VALUE);
+			httpGet.setHeader(HEADER_ACCEPT, HEADER_ACCEPT_VALUE);
+			httpGet.setHeader(HEADER_DNT, HEADER_DNT_VALUE);
+			httpGet.setHeader(HEADER_ACCEPT_ENCODING, HEADER_ACCEPT_ENCODING_VALUE);
+			httpGet.setHeader(HEADER_ACCEPT_LANGUAGE, HEADER_ACCEPT_LANGUAGE_VALUE);
+			HttpResponse httpResponse = defaultHttpClient.execute(httpGet);
+			if (httpResponse != null) {
+				int responseCode = httpResponse.getStatusLine().getStatusCode();
+				Log.d(LOG_TAG, "get response code=" + httpResponse.getStatusLine().getStatusCode());
+				if (responseCode == 204) {
+					// nothing is running
+				} else if (responseCode == 200) {
+					// app is running
+
+					// Need to get real URL after a redirect
+					// http://stackoverflow.com/a/10286025/594751
+					String lastUrl = dialServer.getAppsUrl();
+					if (handler.lastRedirectedUri != null) {
+						lastUrl = handler.lastRedirectedUri.toString();
+						Log.d(LOG_TAG, "lastUrl=" + lastUrl);
+					}
+
+					String response = EntityUtils.toString(httpResponse.getEntity());
+					Log.d(LOG_TAG, "get response=" + response);
+					parseXml(new StringReader(response));
+
+					Header[] headers = httpResponse.getAllHeaders();
+					for (int i = 0; i < headers.length; i++) {
+						Log.d(LOG_TAG, headers[i].getName() + "=" + headers[i].getValue());
+					}
+
+					// stop the app instance
+					HttpDelete httpDelete = new HttpDelete(lastUrl);
+					httpResponse = defaultHttpClient.execute(httpDelete);
+					if (httpResponse != null) {
+						Log.d(LOG_TAG, "delete response code=" + httpResponse.getStatusLine().getStatusCode());
+						response = EntityUtils.toString(httpResponse.getEntity());
+						Log.d(LOG_TAG, "delete response=" + response);
+					} else {
+						Log.d(LOG_TAG, "no delete response");
+					}
+				}
+
+			} else {
+				Log.i(LOG_TAG, "no get response");
+				return;
+			}
+		} catch (Exception e) {
+			Log.e(LOG_TAG, "closeCurrentApp", e);
 		}
 	}
 
@@ -373,7 +438,17 @@ public class RampClient implements RampWebSocketListener {
 		Log.d(LOG_TAG, "onMessage: message" + message);
 
 		// TODO only respond based on interval
-		//rampWebSocketClient.send("[\"cm\",{\"type\":\"pong\"}]");
+		// rampWebSocketClient.send("[\"cm\",{\"type\":\"pong\"}]");
+
+		// ["cv",{"type":"activity","message":{"type":"timeupdate","activityId":"d82cede3-ec23-4f73-8abc-343dd9ca6dbb","state":{"mediaUrl":"http://192.168.0.50:8087/cast.webm","videoUrl":"http://192.168.0.50:8087/cast.webm","currentTime":20.985000610351562,"duration":null,"pause":false,"muted":false,"volume":1,"paused":false}}}]
+		// Should really parse JSON, but only need the current time
+		int start = message.indexOf("\"currentTime\":");
+		if (start > 0) {
+			int end = message.indexOf(",", start);
+			String time = message.substring(start + 14, end);
+			Log.d(LOG_TAG, "currentTime=" + time);
+			flingFrame.updateTime((int) Float.parseFloat(time));
+		}
 	}
 
 	public void onError(Exception ex) {
@@ -382,7 +457,7 @@ public class RampClient implements RampWebSocketListener {
 
 		started = false;
 		closed = true;
-		
+
 		pongThread.interrupt();
 	}
 
@@ -391,23 +466,24 @@ public class RampClient implements RampWebSocketListener {
 
 		started = true;
 		closed = false;
-		
-		if (pongThread!=null) {
+
+		if (pongThread != null) {
 			pongThread.interrupt();
 		}
-		
+
 		pongThread = new Thread(new Runnable() {
 			public void run() {
 				while (started && !closed) {
 					try {
 						rampWebSocketClient.send("[\"cm\",{\"type\":\"pong\"}]");
 						try {
-							Thread.sleep(3000);  // pong every 3 seconds
+							Thread.sleep(3000); // pong every 3 seconds to keep
+												// the app alive
 						} catch (InterruptedException e) {
 						}
 					} catch (Exception e) {
 						Log.e(LOG_TAG, "pongThread", e);
-					} 
+					}
 				}
 			}
 		});
@@ -419,8 +495,10 @@ public class RampClient implements RampWebSocketListener {
 
 		closed = true;
 		started = false;
-		
+
 		pongThread.interrupt();
+
+		flingFrame.updateTime(0);
 	}
 
 	// Media playback controls
@@ -439,10 +517,14 @@ public class RampClient implements RampWebSocketListener {
 	}
 
 	public void stop() {
-		if (rampWebSocketClient != null) {
-			rampWebSocketClient.send("[\"ramp\",{\"type\":\"STOP\", \"cmd_id\":" + commandId + "}]");
-			commandId++;
-		}
+		// ChromeCast app stop behaves like pause
+		/*
+		 * if (rampWebSocketClient != null) {
+		 * rampWebSocketClient.send("[\"ramp\",{\"type\":\"STOP\", \"cmd_id\":"
+		 * + commandId + "}]"); commandId++; }
+		 */
+		// Close the current app
+		closeCurrentApp();
 	}
 
 	// Load media
