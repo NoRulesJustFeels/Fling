@@ -17,6 +17,7 @@ package com.entertailion.java.fling;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.URI;
+import java.nio.channels.NotYetConnectedException;
 import java.util.UUID;
 
 import javax.xml.parsers.SAXParser;
@@ -82,6 +83,8 @@ public class RampClient implements RampWebSocketListener {
 	private String app;
 	private String activityId;
 	private String senderId;
+	
+	private Thread pongThread;
 
 	public RampClient() {
 		this.senderId = UUID.randomUUID().toString();
@@ -370,7 +373,7 @@ public class RampClient implements RampWebSocketListener {
 		Log.d(LOG_TAG, "onMessage: message" + message);
 
 		// TODO only respond based on interval
-		rampWebSocketClient.send("[\"cm\",{\"type\":\"pong\"}]");
+		//rampWebSocketClient.send("[\"cm\",{\"type\":\"pong\"}]");
 	}
 
 	public void onError(Exception ex) {
@@ -379,6 +382,8 @@ public class RampClient implements RampWebSocketListener {
 
 		started = false;
 		closed = true;
+		
+		pongThread.interrupt();
 	}
 
 	public void onOpen(ServerHandshake handshake) {
@@ -386,6 +391,27 @@ public class RampClient implements RampWebSocketListener {
 
 		started = true;
 		closed = false;
+		
+		if (pongThread!=null) {
+			pongThread.interrupt();
+		}
+		
+		pongThread = new Thread(new Runnable() {
+			public void run() {
+				while (started && !closed) {
+					try {
+						rampWebSocketClient.send("[\"cm\",{\"type\":\"pong\"}]");
+						try {
+							Thread.sleep(3000);  // pong every 3 seconds
+						} catch (InterruptedException e) {
+						}
+					} catch (Exception e) {
+						Log.e(LOG_TAG, "pongThread", e);
+					} 
+				}
+			}
+		});
+		pongThread.start();
 	}
 
 	public void onClose(int code, String reason, boolean remote) {
@@ -393,6 +419,8 @@ public class RampClient implements RampWebSocketListener {
 
 		closed = true;
 		started = false;
+		
+		pongThread.interrupt();
 	}
 
 	// Media playback controls

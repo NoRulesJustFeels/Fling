@@ -48,9 +48,12 @@ public class Fling {
 			if (System.getProperty("os.name").startsWith("Mac")) {
 				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(),"/Applications/VLC.app/Contents/MacOS/lib");
 				Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
-				
+			} else if (System.getProperty("os.name").startsWith("Windows 8")) {
+				System.out.println("Found Windows 8");
+				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(), "C:\\Program Files\\VideoLAN\\VLC");
+			    Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
 			} else if (System.getProperty("os.name").startsWith("Windows")) {
-				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(), "C:/Program Files/VideoLAN/VLC");
+				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(), "C:\\Program Files (x86)\\VideoLAN\\VLC﻿");
 			    Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
 			} else {
 				Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);

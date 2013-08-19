@@ -475,7 +475,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 			boolean found = false;
 			String[] extensions = transcodingExtensionValues.split(",");
 			for (String extension : extensions) {
-				if (file.endsWith(extension)) {
+				if (file.endsWith(extension.trim())) {
 					found = true;
 					break;
 				}
@@ -543,10 +543,31 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 			mediaPlayer.playMedia(file, options);
 
 			// http://192.168.0.8:8087/cast.webm
-			String url = "http://" + getNetworAddress().getHostAddress() + ":8087/cast.webm";
+			final String url = "http://" + getNetworAddress().getHostAddress() + ":8087/cast.webm";
 			Log.d(LOG_TAG, "url=" + url);
-			rampClient.stop();
-			rampClient.load(url);
+			if (!rampClient.isClosed()) {
+				rampClient.stop();
+			}
+			if (APP_ID.equals(FlingFrame.CHROMECAST)) {
+				rampClient.launchApp(APP_ID, selectedDialServer);
+				// wait for socket to be ready...
+				new Thread(new Runnable() {
+					public void run() {
+						while (!rampClient.isStarted() && !rampClient.isClosed()) {
+							try {
+								Thread.sleep(500); // make less than 3
+													// second ping time
+							} catch (InterruptedException e) {
+							}
+						}
+						if (!rampClient.isClosed()) {
+							rampClient.load(url);
+						}
+					}
+				}).start();
+			} else {
+				rampClient.load(url);
+			}
 		} catch (Throwable e) {
 			Log.e(LOG_TAG, "vlcTranscode: " + file, e);
 		}
