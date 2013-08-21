@@ -25,6 +25,7 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
+import java.net.ServerSocket;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -103,10 +104,14 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 
 	private DialServer selectedDialServer;
 
+	private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("HH:mm:ss");
+
 	public FlingFrame() {
 		super();
 
 		rampClient = new RampClient(this);
+
+		simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
 		Locale locale = Locale.getDefault();
 		resourceBundle = ResourceBundle.getBundle("com/entertailion/java/fling/resources/resources", locale);
@@ -243,42 +248,54 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	 * 
 	 */
 	private void discoverDevices() {
-		broadcastClient = new BroadcastDiscoveryClient(getBroadcastAddress(), this);
-		broadcastClientThread = new Thread(broadcastClient);
-
-		// discovering devices can take time, so do it in a thread
-		new Thread(new Runnable() {
-			public void run() {
+		Inet4Address broadcastAddress = getBroadcastAddress();
+		if (broadcastAddress != null) {
+			if (!broadcastAddress.getHostAddress().endsWith(".255")) {
+				// invalid broadcast address; use default instead
 				try {
-					showProgressDialog(resourceBundle.getString("progress.discoveringDevices"));
-					broadcastClientThread.start();
-					Properties properties = loadProperties();
-
-					// wait a while...
-					// TODO do this better
-					Thread.sleep(10 * 1000);
-
-					broadcastClient.stop();
-
-					Log.d(LOG_TAG, "size=" + trackedServers.size());
-					if (trackedServers.size() > 0) {
-						deviceList.removeAllItems();
-						deviceList.addItem(resourceBundle.getString("devices.select")); // no
-																						// selection
-																						// option
-						for (DialServer dialServer : trackedServers) {
-							deviceList.addItem(dialServer.getFriendlyName() + " / " + dialServer.getIpAddress().getHostName());
-							servers.add(dialServer);
-						}
-					}
-
-					deviceList.invalidate();
-					hideProgressDialog();
-				} catch (InterruptedException e) {
-					Log.e(LOG_TAG, "discoverDevices", e);
+					broadcastAddress = (Inet4Address) Inet4Address.getByName("255.255.255.255");
+				} catch (Exception e) {
 				}
 			}
-		}).start();
+			broadcastClient = new BroadcastDiscoveryClient(broadcastAddress, this);
+			broadcastClientThread = new Thread(broadcastClient);
+
+			// discovering devices can take time, so do it in a thread
+			new Thread(new Runnable() {
+				public void run() {
+					try {
+						showProgressDialog(resourceBundle.getString("progress.discoveringDevices"));
+						broadcastClientThread.start();
+						Properties properties = loadProperties();
+
+						// wait a while...
+						// TODO do this better
+						Thread.sleep(10 * 1000);
+
+						broadcastClient.stop();
+
+						Log.d(LOG_TAG, "size=" + trackedServers.size());
+						if (trackedServers.size() > 0) {
+							deviceList.removeAllItems();
+							deviceList.addItem(resourceBundle.getString("devices.select")); // no
+																							// selection
+																							// option
+							for (DialServer dialServer : trackedServers) {
+								deviceList.addItem(dialServer.getFriendlyName() + " / " + dialServer.getIpAddress().getHostName());
+								servers.add(dialServer);
+							}
+						}
+
+						deviceList.invalidate();
+						hideProgressDialog();
+					} catch (InterruptedException e) {
+						Log.e(LOG_TAG, "discoverDevices", e);
+					}
+				}
+			}).start();
+		} else {
+			Log.d(LOG_TAG, "broadcastAddress null");
+		}
 	}
 
 	public void onBroadcastFound(final BroadcastAdvertisement advert) {
@@ -292,6 +309,9 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 						Header header = response.getLastHeader(HEADER_APPLICATION_URL);
 						if (header != null) {
 							appsUrl = header.getValue();
+							if (!appsUrl.endsWith("/")) {
+								appsUrl = appsUrl + "/";
+							}
 							Log.d(LOG_TAG, "appsUrl=" + appsUrl);
 						}
 						try {
@@ -334,48 +354,34 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	public Inet4Address getBroadcastAddress() {
 		Inet4Address selectedInetAddress = null;
 		try {
-			Enumeration<NetworkInterface> list = NetworkInterface.getNetworkInterfaces();
-
-			while (list.hasMoreElements()) {
-				NetworkInterface iface = list.nextElement();
-				if (iface == null)
-					continue;
-
-				if (!iface.isLoopback() && iface.isUp()) {
-					Iterator<InterfaceAddress> it = iface.getInterfaceAddresses().iterator();
-					while (it.hasNext()) {
-						InterfaceAddress interfaceAddress = it.next();
-						if (interfaceAddress == null)
-							continue;
-						InetAddress address = interfaceAddress.getAddress();
-						if (address instanceof Inet4Address) {
-							if (address.getHostAddress().toString().charAt(0) != '0') {
-								InetAddress broadcast = interfaceAddress.getBroadcast();
-								if (selectedInetAddress == null) {
-									selectedInetAddress = (Inet4Address) broadcast;
-								} else if (iface.getName().startsWith("wlan") || iface.getName().startsWith("en")) { // prefer
-																														// wlan
-																														// interface
-									selectedInetAddress = (Inet4Address) broadcast;
-								}
-							}
-						}
-					}
+			InterfaceAddress interfaceAddress = null;
+			InterfaceAddress oneNineTwoInetAddress = getPreferredInetAddress("192.");
+			if (oneNineTwoInetAddress != null) {
+				interfaceAddress = oneNineTwoInetAddress;
+			} else {
+				InterfaceAddress oneSevenTwoInetAddress = getPreferredInetAddress("172.");
+				if (oneSevenTwoInetAddress != null) {
+					interfaceAddress = oneSevenTwoInetAddress;
+				} else {
+					interfaceAddress = getPreferredInetAddress("10.");
 				}
 			}
+			if (interfaceAddress != null) {
+				InetAddress broadcast = interfaceAddress.getBroadcast();
+				Log.d(LOG_TAG, "broadcast=" + broadcast);
+				if (broadcast != null) {
+					return (Inet4Address) broadcast;
+				}
+			}
+
 		} catch (Exception ex) {
 		}
 
 		return selectedInetAddress;
 	}
 
-	/**
-	 * Get the network address.
-	 * 
-	 * @return
-	 */
-	public Inet4Address getNetworAddress() {
-		Inet4Address selectedInetAddress = null;
+	private InterfaceAddress getPreferredInetAddress(String prefix) {
+		InterfaceAddress selectedInterfaceAddress = null;
 		try {
 			Enumeration<NetworkInterface> list = NetworkInterface.getNetworkInterfaces();
 
@@ -391,21 +397,48 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 						if (interfaceAddress == null)
 							continue;
 						InetAddress address = interfaceAddress.getAddress();
+						Log.d(LOG_TAG, "address=" + address);
 						if (address instanceof Inet4Address) {
-							if (address.getHostAddress().toString().charAt(0) != '0') {
-								InetAddress networkAddress = interfaceAddress.getAddress();
-								if (selectedInetAddress == null) {
-									selectedInetAddress = (Inet4Address) networkAddress;
-								} else if (iface.getName().startsWith("wlan") || iface.getName().startsWith("en")) { // prefer
-																														// wlan
-																														// interface
-									selectedInetAddress = (Inet4Address) networkAddress;
-								}
+							if (address.getHostAddress().toString().startsWith(prefix)) {
+								return interfaceAddress;
 							}
 						}
 					}
 				}
 			}
+		} catch (Exception ex) {
+		}
+		return selectedInterfaceAddress;
+	}
+
+	/**
+	 * Get the network address.
+	 * 
+	 * @return
+	 */
+	public Inet4Address getNetworAddress() {
+		Inet4Address selectedInetAddress = null;
+		try {
+			InterfaceAddress interfaceAddress = null;
+			InterfaceAddress oneNineTwoInetAddress = getPreferredInetAddress("192.");
+			if (oneNineTwoInetAddress != null) {
+				interfaceAddress = oneNineTwoInetAddress;
+			} else {
+				InterfaceAddress oneSevenTwoInetAddress = getPreferredInetAddress("172.");
+				if (oneSevenTwoInetAddress != null) {
+					interfaceAddress = oneSevenTwoInetAddress;
+				} else {
+					interfaceAddress = getPreferredInetAddress("10.");
+				}
+			}
+			if (interfaceAddress != null) {
+				InetAddress networkAddress = interfaceAddress.getAddress();
+				Log.d(LOG_TAG, "networkAddress=" + networkAddress);
+				if (networkAddress != null) {
+					return (Inet4Address) networkAddress;
+				}
+			}
+
 		} catch (Exception ex) {
 		}
 
@@ -543,15 +576,58 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 
 			// Add a component to be notified of player events
 			mediaPlayer.addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
-				// TODO
+				public void opening(MediaPlayer mediaPlayer) {
+					Log.d(LOG_TAG, "VLC Transcoding: Opening");
+				}
+
+				public void buffering(MediaPlayer mediaPlayer, float newCache) {
+					Log.d(LOG_TAG, "VLC Transcoding: Buffering");
+				}
+
+				public void playing(MediaPlayer mediaPlayer) {
+					Log.d(LOG_TAG, "VLC Transcoding: Playing");
+				}
+
+				public void paused(MediaPlayer mediaPlayer) {
+					Log.d(LOG_TAG, "VLC Transcoding: Paused");
+				}
+
+				public void stopped(MediaPlayer mediaPlayer) {
+					Log.d(LOG_TAG, "VLC Transcoding: Stopped");
+				}
+
+				public void finished(MediaPlayer mediaPlayer) {
+					Log.d(LOG_TAG, "VLC Transcoding: Finished");
+				}
+
+				public void error(MediaPlayer mediaPlayer) {
+					Log.d(LOG_TAG, "VLC Transcoding: Error");
+				}
 			});
 
+			// Find a port for VLC HTTP server
+			boolean started = false;
+			int vlcPort = port + 1;
+			while (!started) {
+				try {
+					ServerSocket serverSocket = new ServerSocket(vlcPort);
+					Log.d(LOG_TAG, "Available port for VLC: " + vlcPort);
+					started = true;
+					serverSocket.close();
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
+					vlcPort++;
+				} catch (Exception ex) {
+					break;
+				}
+			}
+
 			// Play a particular item, with options if necessary
-			String options[] = { ":sout=#transcode{" + transcodingParameterValues + "}:http{mux=webm,dst=:8087/cast.webm}", ":sout-keep" };
+			String options[] = { ":sout=#transcode{" + transcodingParameterValues + "}:http{mux=webm,dst=:" + vlcPort + "/cast.webm}", ":sout-keep" };
 			mediaPlayer.playMedia(file, options);
 
 			// http://192.168.0.8:8087/cast.webm
-			final String url = "http://" + getNetworAddress().getHostAddress() + ":8087/cast.webm";
+			final String url = "http://" + getNetworAddress().getHostAddress() + ":" + vlcPort + "/cast.webm";
 			Log.d(LOG_TAG, "url=" + url);
 			if (!rampClient.isClosed()) {
 				rampClient.stop();
@@ -609,10 +685,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	}
 
 	public void updateTime(int time) {
-		SimpleDateFormat simpleDateFormat = new SimpleDateFormat("HH:mm:ss");
-		simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-		String format = simpleDateFormat.format(new Date(time * 1000));
-		label.setText(format);
+		label.setText(simpleDateFormat.format(new Date(time * 1000)));
 	}
 
 }

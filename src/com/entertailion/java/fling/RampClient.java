@@ -301,64 +301,66 @@ public class RampClient implements RampWebSocketListener {
 	}
 
 	public void closeCurrentApp() {
-		try {
-			DefaultHttpClient defaultHttpClient = HttpRequestHelper.createHttpClient();
-			CustomRedirectHandler handler = new CustomRedirectHandler();
-			defaultHttpClient.setRedirectHandler(handler);
-			BasicHttpContext localContext = new BasicHttpContext();
+		if (dialServer != null) {
+			try {
+				DefaultHttpClient defaultHttpClient = HttpRequestHelper.createHttpClient();
+				CustomRedirectHandler handler = new CustomRedirectHandler();
+				defaultHttpClient.setRedirectHandler(handler);
+				BasicHttpContext localContext = new BasicHttpContext();
 
-			// check if any app is running
-			HttpGet httpGet = new HttpGet(dialServer.getAppsUrl());
-			httpGet.setHeader(HEADER_CONNECTION, HEADER_CONNECTION_VALUE);
-			httpGet.setHeader(HEADER_USER_AGENT, HEADER_USER_AGENT_VALUE);
-			httpGet.setHeader(HEADER_ACCEPT, HEADER_ACCEPT_VALUE);
-			httpGet.setHeader(HEADER_DNT, HEADER_DNT_VALUE);
-			httpGet.setHeader(HEADER_ACCEPT_ENCODING, HEADER_ACCEPT_ENCODING_VALUE);
-			httpGet.setHeader(HEADER_ACCEPT_LANGUAGE, HEADER_ACCEPT_LANGUAGE_VALUE);
-			HttpResponse httpResponse = defaultHttpClient.execute(httpGet);
-			if (httpResponse != null) {
-				int responseCode = httpResponse.getStatusLine().getStatusCode();
-				Log.d(LOG_TAG, "get response code=" + httpResponse.getStatusLine().getStatusCode());
-				if (responseCode == 204) {
-					// nothing is running
-				} else if (responseCode == 200) {
-					// app is running
+				// check if any app is running
+				HttpGet httpGet = new HttpGet(dialServer.getAppsUrl());
+				httpGet.setHeader(HEADER_CONNECTION, HEADER_CONNECTION_VALUE);
+				httpGet.setHeader(HEADER_USER_AGENT, HEADER_USER_AGENT_VALUE);
+				httpGet.setHeader(HEADER_ACCEPT, HEADER_ACCEPT_VALUE);
+				httpGet.setHeader(HEADER_DNT, HEADER_DNT_VALUE);
+				httpGet.setHeader(HEADER_ACCEPT_ENCODING, HEADER_ACCEPT_ENCODING_VALUE);
+				httpGet.setHeader(HEADER_ACCEPT_LANGUAGE, HEADER_ACCEPT_LANGUAGE_VALUE);
+				HttpResponse httpResponse = defaultHttpClient.execute(httpGet);
+				if (httpResponse != null) {
+					int responseCode = httpResponse.getStatusLine().getStatusCode();
+					Log.d(LOG_TAG, "get response code=" + httpResponse.getStatusLine().getStatusCode());
+					if (responseCode == 204) {
+						// nothing is running
+					} else if (responseCode == 200) {
+						// app is running
 
-					// Need to get real URL after a redirect
-					// http://stackoverflow.com/a/10286025/594751
-					String lastUrl = dialServer.getAppsUrl();
-					if (handler.lastRedirectedUri != null) {
-						lastUrl = handler.lastRedirectedUri.toString();
-						Log.d(LOG_TAG, "lastUrl=" + lastUrl);
+						// Need to get real URL after a redirect
+						// http://stackoverflow.com/a/10286025/594751
+						String lastUrl = dialServer.getAppsUrl();
+						if (handler.lastRedirectedUri != null) {
+							lastUrl = handler.lastRedirectedUri.toString();
+							Log.d(LOG_TAG, "lastUrl=" + lastUrl);
+						}
+
+						String response = EntityUtils.toString(httpResponse.getEntity());
+						Log.d(LOG_TAG, "get response=" + response);
+						parseXml(new StringReader(response));
+
+						Header[] headers = httpResponse.getAllHeaders();
+						for (int i = 0; i < headers.length; i++) {
+							Log.d(LOG_TAG, headers[i].getName() + "=" + headers[i].getValue());
+						}
+
+						// stop the app instance
+						HttpDelete httpDelete = new HttpDelete(lastUrl);
+						httpResponse = defaultHttpClient.execute(httpDelete);
+						if (httpResponse != null) {
+							Log.d(LOG_TAG, "delete response code=" + httpResponse.getStatusLine().getStatusCode());
+							response = EntityUtils.toString(httpResponse.getEntity());
+							Log.d(LOG_TAG, "delete response=" + response);
+						} else {
+							Log.d(LOG_TAG, "no delete response");
+						}
 					}
 
-					String response = EntityUtils.toString(httpResponse.getEntity());
-					Log.d(LOG_TAG, "get response=" + response);
-					parseXml(new StringReader(response));
-
-					Header[] headers = httpResponse.getAllHeaders();
-					for (int i = 0; i < headers.length; i++) {
-						Log.d(LOG_TAG, headers[i].getName() + "=" + headers[i].getValue());
-					}
-
-					// stop the app instance
-					HttpDelete httpDelete = new HttpDelete(lastUrl);
-					httpResponse = defaultHttpClient.execute(httpDelete);
-					if (httpResponse != null) {
-						Log.d(LOG_TAG, "delete response code=" + httpResponse.getStatusLine().getStatusCode());
-						response = EntityUtils.toString(httpResponse.getEntity());
-						Log.d(LOG_TAG, "delete response=" + response);
-					} else {
-						Log.d(LOG_TAG, "no delete response");
-					}
+				} else {
+					Log.i(LOG_TAG, "no get response");
+					return;
 				}
-
-			} else {
-				Log.i(LOG_TAG, "no get response");
-				return;
+			} catch (Exception e) {
+				Log.e(LOG_TAG, "closeCurrentApp", e);
 			}
-		} catch (Exception e) {
-			Log.e(LOG_TAG, "closeCurrentApp", e);
 		}
 	}
 
