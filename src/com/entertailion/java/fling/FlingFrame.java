@@ -281,7 +281,8 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 																							// selection
 																							// option
 							for (DialServer dialServer : trackedServers) {
-								deviceList.addItem(dialServer.getFriendlyName() + " / " + dialServer.getIpAddress().getHostName());
+								//deviceList.addItem(dialServer.getFriendlyName() + " / " + dialServer.getIpAddress().getHostName());
+								deviceList.addItem(dialServer);
 								servers.add(dialServer);
 							}
 						}
@@ -495,10 +496,12 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		int pos = cb.getSelectedIndex();
 		// when device is selected, attempt to connect
 		if (servers != null && pos > 0) {
-			selectedDialServer = servers.get(pos - 1);
+			selectedDialServer = (DialServer)cb.getSelectedItem();
+			//selectedDialServer = servers.get(pos - 1);
 			if (APP_ID.equals(FlingFrame.CHROMECAST)) {
 				// Don't launch ChromeCast app now; there is a timeout that will
-				// close the app if the media request isn't sent quickly
+				// close the app if the media request isn't sent quickly.
+				// Transcoding can take time to be ready to send video.
 			} else {
 				rampClient.launchApp(APP_ID, selectedDialServer);
 			}

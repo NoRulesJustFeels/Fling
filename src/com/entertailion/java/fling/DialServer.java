@@ -137,8 +137,7 @@ public class DialServer {
 
 	@Override
 	public String toString() {
-		return String.format("%s [%s:%d]", friendlyName,
-				ipAddress.getHostAddress(), port);
+		return getFriendlyName() + " / " + getIpAddress().getHostName();
 	}
 
 }

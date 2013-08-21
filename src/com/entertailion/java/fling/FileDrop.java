@@ -54,6 +54,7 @@ import java.io.Reader;
  */
 public class FileDrop
 {
+	private static final String LOG_TAG = "FileDrop";
     private transient javax.swing.border.Border normalBorder;
     private transient java.awt.dnd.DropTargetListener dropListener;
     
@@ -369,16 +370,11 @@ public class FileDrop
                             // END 2007-09-12 Nathan Blomquist -- Linux (KDE/Gnome) support added.
                         }   // end else: not a file list
                     }   // end try
-                    catch ( java.io.IOException io) 
-                    {   log( out, "FileDrop: IOException - abort:" );
-                        io.printStackTrace( out );
+                    catch (Exception e) 
+                    {   log( out, "FileDrop: Exception - abort:" );
+                        e.printStackTrace( out );
                         evt.rejectDrop();
-                    }   // end catch IOException
-                    catch (java.awt.datatransfer.UnsupportedFlavorException ufe) 
-                    {   log( out, "FileDrop: UnsupportedFlavorException - abort:" );
-                        ufe.printStackTrace( out );
-                        evt.rejectDrop();
-                    }   // end catch: UnsupportedFlavorException
+                    }   // end catch: Exception
                     finally
                     {
                         // If it's a Swing component, reset its border
@@ -553,8 +549,9 @@ public class FileDrop
     /** Outputs <tt>message</tt> to <tt>out</tt> if it's not null. */
     private static void log( java.io.PrintStream out, String message )
     {   // Log message if requested
-        if( out != null )
-            out.println( message );
+//        if( out != null )
+//            out.println( message );
+        Log.d(LOG_TAG, message);
     }   // end log
 
     

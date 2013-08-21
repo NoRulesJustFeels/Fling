@@ -197,12 +197,13 @@ public class BroadcastDiscoveryClient implements Runnable {
 			String strPacket = new String(packet.getData(), 0,
 					packet.getLength());
 			Log.d(LOG_TAG, "response=" + strPacket);
-			String tokens[] = strPacket.trim().split("\\r\\n");
+			String tokens[] = strPacket.trim().split("\\n");
+			Log.d(LOG_TAG, "tokens.length="+tokens.length);
 
 			String location = null;
 			boolean foundSt = false;
 			for (int i = 0; i < tokens.length; i++) {
-				String token = tokens[i];
+				String token = tokens[i].trim();
 				if (token.startsWith(HEADER_LOCATION)) {
 					// LOCATION: http://192.168.0.51:47944/dd.xml
 					location = token.substring(10).trim();

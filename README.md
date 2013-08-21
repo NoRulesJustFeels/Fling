@@ -17,7 +17,7 @@ Then drag-and-drop a video file onto the application to beam it to the ChromeCas
 <p>ChromeCast devices only support a very limited number of <a href="https://developers.google.com/cast/supported_media_types">media formats</a>.
 Fling has experimental support for converting other media formats into <a href="http://en.wikipedia.org/wiki/WebM">WebM</a> using the <a href="https://github.com/caprica/vlcj">vlcj library</a> for <a href="http://www.videolan.org/index.html">VLC</a>. 
 You need to <a href="http://www.videolan.org/vlc/#download">download</a> and install VLC for your computer. Click on the Fling Settings button to configure which file formats to convert and
-to configure the <a href="http://www.videolan.org/doc/videolan-howto/en/ch09.html">VLC transcoding parameters</a>. By default Fling uses the following VLC transcoding parameters:
+to configure the <a href="http://www.videolan.org/doc/streaming-howto/en/ch03.html#id346868">VLC transcoding parameters</a>. By default Fling uses the following VLC transcoding parameters:
 <blockquote>
 :sout=#transcode{vcodec=VP80,vb=1000,width=500,acodec=vorb,ab=128,channels=2,samplerate=44100} :http{mux=webm,dst=:8087/cast.webm} :sout-keep
 </blockquote>
