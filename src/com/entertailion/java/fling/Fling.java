@@ -89,6 +89,7 @@ public class Fling {
 		flingFrame.setIconImage(img);
 		flingFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		flingFrame.setSize(420, 250);
+		//flingFrame.setSize(420, 300);   // with scrubber
 		flingFrame.setLocationRelativeTo(null);
 		flingFrame.setVisible(true);
 	}

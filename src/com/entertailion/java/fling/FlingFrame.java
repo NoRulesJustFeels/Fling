@@ -48,7 +48,10 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.JSlider;
 import javax.swing.JTextField;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
@@ -67,7 +70,7 @@ import uk.co.caprica.vlcj.player.MediaPlayerFactory;
  * @author leon_nicholls
  * 
  */
-public class FlingFrame extends JFrame implements ActionListener, BroadcastDiscoveryHandler {
+public class FlingFrame extends JFrame implements ActionListener, BroadcastDiscoveryHandler, ChangeListener {
 	private static final String LOG_TAG = "FlingFrame";
 
 	// TODO Add your own app id here
@@ -79,7 +82,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	private static final String HEADER_APPLICATION_URL = "Application-URL";
 	private static final String CHROME_CAST_MODEL_NAME = "Eureka Dongle";
 	private static final String TRANSCODING_EXTENSIONS = "wmv,avi,mkv,mpg,mpeg,flv,3gp,ogm";
-	private static final String TRANSCODING_PARAMETERS = "vcodec=VP80,vb=1000,width=500,acodec=vorb,ab=128,channels=2,samplerate=44100";
+	private static final String TRANSCODING_PARAMETERS = "vcodec=VP80,vb=1000,vfilter=canvas{width=640,height=360},acodec=vorb,ab=128,channels=2,samplerate=44100";
 	private static final String PROPERTY_TRANSCODING_EXTENSIONS = "transcoding.extensions";
 	private static final String PROPERTY_TRANSCODING_PARAMETERS = "transcoding.parameters";
 	private static final String SELECTED_NETWORK = "selected.network";
@@ -89,6 +92,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	private JDialog progressDialog;
 	private JButton refreshButton, playButton, pauseButton, stopButton, settingsButton;
 	private JLabel label;
+	private JSlider scrubber;
 	private ResourceBundle resourceBundle;
 	private EmbeddedServer embeddedServer;
 
@@ -220,6 +224,14 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		devicePane.add(settingsButton);
 		listPane.add(devicePane);
 		listPane.add(DragHereIcon.makeUI(this));
+		
+		scrubber = new JSlider(JSlider.HORIZONTAL, 0, 100, 0);
+		scrubber.addChangeListener(this);
+		scrubber.setMajorTickSpacing(25);
+		scrubber.setMinorTickSpacing(5);
+		scrubber.setPaintTicks(true);
+		scrubber.setEnabled(false);
+		//listPane.add(scrubber);
 
 		// panel of playback buttons
 		JPanel buttonPane = new JPanel();
@@ -263,6 +275,18 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		startWebserver();
 		discoverDevices();
 	}
+	
+	public void stateChanged(ChangeEvent e) {
+	    JSlider source = (JSlider)e.getSource();
+	    if (!source.getValueIsAdjusting()) {
+	        int position = (int)source.getValue();
+	        if (position == 0) {
+	        	// TODO
+	        } else {
+	        	// TODO
+	        }
+	    }
+	}
 
 	/**
 	 * Start a web server to serve the videos to the media player on the
@@ -299,13 +323,14 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		Properties properties = loadProperties();
 		Inet4Address broadcastAddress = getBroadcastAddress();
 		if (broadcastAddress != null) {
-			if (!broadcastAddress.getHostAddress().endsWith(".255")) {
+			if (!broadcastAddress.getHostAddress().endsWith(".255") || !(broadcastAddress.getHostAddress().startsWith("192.") || broadcastAddress.getHostAddress().startsWith("172.") || broadcastAddress.getHostAddress().startsWith("10."))) {
 				// invalid broadcast address; use default instead
 				try {
 					broadcastAddress = (Inet4Address) Inet4Address.getByName("255.255.255.255");
 				} catch (Exception e) {
 				}
 			}
+			Log.d(LOG_TAG, "broadcast="+broadcastAddress.getHostAddress());
 			broadcastClient = new BroadcastDiscoveryClient(broadcastAddress, this);
 			broadcastClientThread = new Thread(broadcastClient);
 			
@@ -752,6 +777,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	}
 
 	public void updateTime(int time) {
+		scrubber.setEnabled(true);
 		label.setText(simpleDateFormat.format(new Date(time * 1000)));
 	}
 
