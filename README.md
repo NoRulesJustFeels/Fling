@@ -44,6 +44,16 @@ To play the video, a web server is created on port 8080 on your computer and you
 </ul>
 </p>
 
+### Building & Running (with Maven)
+
+```bash
+git clone github.com/entertailion/Fling # get the code
+cd Fling
+mvn package # maven will get dependencies & build everything
+java -jar target/Fling-0.0.1-SNAPSHOT-jar-with-dependencies.jar # run it!
+```
+
+
 <p>
 <h2>RAMP Protocol for ChromeCast Explained (unofficial):</h2>
 
