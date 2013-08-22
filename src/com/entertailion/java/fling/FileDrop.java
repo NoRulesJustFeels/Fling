@@ -380,7 +380,11 @@ public class FileDrop
                     catch (Exception e) 
                     {   log( out, "FileDrop: Exception - abort:" );
                         e.printStackTrace();
-                        evt.rejectDrop();
+                        try {
+							evt.rejectDrop();
+						} catch (Exception e1) {
+							e1.printStackTrace();
+						}
                     }   // end catch: Exception
                     finally
                     {
