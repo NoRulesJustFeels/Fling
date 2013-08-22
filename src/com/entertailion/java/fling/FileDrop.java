@@ -311,7 +311,14 @@ public class FileDrop
                         java.awt.datatransfer.Transferable tr = evt.getTransferable();
 
                         // Is it a file list?
-                        if (tr.isDataFlavorSupported (java.awt.datatransfer.DataFlavor.javaFileListFlavor))
+                        boolean isJavaFileListFlavor = false;
+                        try {
+							isJavaFileListFlavor = tr.isDataFlavorSupported (java.awt.datatransfer.DataFlavor.javaFileListFlavor);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+                        
+                        if (isJavaFileListFlavor)
                         {
                             // Say we'll take it.
                             //evt.acceptDrop ( java.awt.dnd.DnDConstants.ACTION_COPY_OR_MOVE );
@@ -372,7 +379,7 @@ public class FileDrop
                     }   // end try
                     catch (Exception e) 
                     {   log( out, "FileDrop: Exception - abort:" );
-                        e.printStackTrace( out );
+                        e.printStackTrace();
                         evt.rejectDrop();
                     }   // end catch: Exception
                     finally
