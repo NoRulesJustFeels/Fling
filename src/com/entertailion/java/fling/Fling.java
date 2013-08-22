@@ -17,6 +17,7 @@ import java.awt.Toolkit;
 import java.net.URL;
 
 import javax.swing.WindowConstants;
+import javax.swing.UIManager;
 
 //import uk.co.caprica.vlcj.binding.LibVlc;
 import uk.co.caprica.vlcj.runtime.RuntimeUtil;
@@ -79,6 +80,12 @@ public class Fling {
 	 * Create the main window frame
 	 */
 	public static void createAndShowGUI() {
+		Log.d(LOG_TAG, "set to system default LaF");
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch(Exception ex) {
+			System.out.println("Cannot find system look and feel, setting to metal.");
+		}
 		Log.d(LOG_TAG, "createAndShowGUI");
 		flingFrame = new FlingFrame();
 		// change the default app icon; might not work for all platforms
