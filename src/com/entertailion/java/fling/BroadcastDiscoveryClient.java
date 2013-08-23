@@ -21,9 +21,11 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.URL;
+import java.net.UnknownHostException;
 
 /**
  * DIAL protocol client:
@@ -38,6 +40,8 @@ public class BroadcastDiscoveryClient implements Runnable {
 	/**
 	 * UDP port to send probe messages to.
 	 */
+
+	private static final String BROADCAST_ADDRESS = "239.255.255.250";
 	private static final int BROADCAST_SERVER_PORT = 1900;
 
 	/**
@@ -48,16 +52,15 @@ public class BroadcastDiscoveryClient implements Runnable {
 
 	private static final String SEARCH_TARGET = "urn:dial-multiscreen-org:service:dial:1";
 
-	private static final String M_SEARCH = "M-SEARCH * HTTP/1.1\r\n"
-			+ "HOST: 239.255.255.250:1900\r\n" + "MAN: \"ssdp:discover\"\r\n"
-			+ "MX: 10\r\n" + "ST: " + SEARCH_TARGET + "\r\n\r\n";
+	private static final String M_SEARCH = "M-SEARCH * HTTP/1.1\r\n" + "HOST: " + BROADCAST_ADDRESS + ":" + BROADCAST_SERVER_PORT + "\r\n"
+			+ "MAN: \"ssdp:discover\"\r\n" + "MX: 10\r\n" + "ST: " + SEARCH_TARGET + "\r\n\r\n";
 
 	private static final String HEADER_LOCATION = "LOCATION";
 	private static final String HEADER_ST = "ST";
 
-	private final InetAddress mBroadcastAddress;
+	private InetAddress mBroadcastAddress;
 
-	private final Thread mBroadcastThread;
+	private Thread mBroadcastThread;
 	private int mBroadcastInterval;
 	private boolean mBroadcasting = true;
 	private boolean mReceiving = true;
@@ -65,12 +68,12 @@ public class BroadcastDiscoveryClient implements Runnable {
 	/**
 	 * Handle to main thread.
 	 */
-	private final BroadcastDiscoveryHandler mHandler;
+	private BroadcastDiscoveryHandler mHandler;
 
 	/**
 	 * Send/receive socket.
 	 */
-	private final DatagramSocket mSocket;
+	private DatagramSocket mSocket;
 
 	/**
 	 * Constructor
@@ -80,44 +83,47 @@ public class BroadcastDiscoveryClient implements Runnable {
 	 * @param handler
 	 *            update Handler in main thread
 	 */
-	public BroadcastDiscoveryClient(InetAddress broadcastAddress,
-			BroadcastDiscoveryHandler handler) {
+	public BroadcastDiscoveryClient(BroadcastDiscoveryHandler handler) {
 		mReceiving = true;
-		mBroadcastAddress = broadcastAddress;
-		mHandler = handler;
-
 		try {
-			mSocket = new DatagramSocket(); // binds to random port
-			mSocket.setBroadcast(true);
-		} catch (SocketException e) {
-			Log.e(LOG_TAG, "Could not create broadcast client socket.", e);
-			throw new RuntimeException();
-		}
-		mBroadcastInterval = PROBE_INTERVAL_MS;
-		mBroadcastThread = new Thread(new Runnable() {
+			mBroadcastAddress = (Inet4Address) Inet4Address.getByName(BROADCAST_ADDRESS);
+			mHandler = handler;
 
-			@Override
-			public void run() {
-				while (mBroadcasting) {
-					try {
-						BroadcastDiscoveryClient.this.sendProbe();
+			try {
+				mSocket = new DatagramSocket(); // binds to random port
+				mSocket.setBroadcast(true);
+			} catch (SocketException e) {
+				Log.e(LOG_TAG, "Could not create broadcast client socket.", e);
+				throw new RuntimeException();
+			}
+			mBroadcastInterval = PROBE_INTERVAL_MS;
+			mBroadcastThread = new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					while (mBroadcasting) {
 						try {
-							Thread.sleep(mBroadcastInterval);
-						} catch (InterruptedException e) {
+							BroadcastDiscoveryClient.this.sendProbe();
+							try {
+								Thread.sleep(mBroadcastInterval);
+							} catch (InterruptedException e) {
+							}
+							mBroadcastInterval = mBroadcastInterval * 2;
+							if (mBroadcastInterval > PROBE_INTERVAL_MS_MAX) {
+								mBroadcastInterval = PROBE_INTERVAL_MS_MAX;
+								mBroadcasting = false;
+								mReceiving = false;
+							}
+						} catch (Throwable e) {
+							Log.e(LOG_TAG, "run", e);
 						}
-						mBroadcastInterval = mBroadcastInterval * 2;
-						if (mBroadcastInterval > PROBE_INTERVAL_MS_MAX) {
-							mBroadcastInterval = PROBE_INTERVAL_MS_MAX;
-							mBroadcasting = false;
-							mReceiving = false;
-						}
-					} catch (Throwable e) {
-						Log.e(LOG_TAG, "run", e);
 					}
 				}
-			}
-		});
-		Log.i(LOG_TAG, "Starting client on address " + mBroadcastAddress);
+			});
+			Log.i(LOG_TAG, "Starting client on address " + mBroadcastAddress);
+		} catch (UnknownHostException e) {
+			Log.e(LOG_TAG, "BroadcastDiscoveryClient", e);
+		}
 	}
 
 	/** {@inheritDoc} */
@@ -129,8 +135,7 @@ public class BroadcastDiscoveryClient implements Runnable {
 
 		while (mReceiving) {
 			try {
-				DatagramPacket packet = new DatagramPacket(buffer,
-						buffer.length);
+				DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 				mSocket.receive(packet);
 				handleResponsePacket(packet);
 			} catch (InterruptedIOException e) {
@@ -181,8 +186,7 @@ public class BroadcastDiscoveryClient implements Runnable {
 	private DatagramPacket makeRequestPacket(int responsePort) {
 		String message = M_SEARCH;
 		byte[] buf = message.getBytes();
-		DatagramPacket packet = new DatagramPacket(buf, buf.length,
-				mBroadcastAddress, BROADCAST_SERVER_PORT);
+		DatagramPacket packet = new DatagramPacket(buf, buf.length, mBroadcastAddress, BROADCAST_SERVER_PORT);
 		return packet;
 	}
 
@@ -194,11 +198,10 @@ public class BroadcastDiscoveryClient implements Runnable {
 	 */
 	private void handleResponsePacket(DatagramPacket packet) {
 		try {
-			String strPacket = new String(packet.getData(), 0,
-					packet.getLength());
+			String strPacket = new String(packet.getData(), 0, packet.getLength());
 			Log.d(LOG_TAG, "response=" + strPacket);
 			String tokens[] = strPacket.trim().split("\\n");
-			Log.d(LOG_TAG, "tokens.length="+tokens.length);
+			Log.d(LOG_TAG, "tokens.length=" + tokens.length);
 
 			String location = null;
 			boolean foundSt = false;
@@ -225,8 +228,7 @@ public class BroadcastDiscoveryClient implements Runnable {
 			try {
 				URL uri = new URL(location);
 				InetAddress address = InetAddress.getByName(uri.getHost());
-				advert = new BroadcastAdvertisement(location, address,
-						uri.getPort());
+				advert = new BroadcastAdvertisement(location, address, uri.getPort());
 			} catch (Exception e) {
 				return;
 			}

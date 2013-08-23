@@ -16,9 +16,9 @@ import java.awt.Image;
 import java.awt.Toolkit;
 import java.net.URL;
 
+import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 
-//import uk.co.caprica.vlcj.binding.LibVlc;
 import uk.co.caprica.vlcj.runtime.RuntimeUtil;
 
 import com.sun.jna.Native;
@@ -46,15 +46,15 @@ public class Fling {
 		try {
 			System.out.println(System.getProperty("os.name"));
 			if (System.getProperty("os.name").startsWith("Mac")) {
-				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(),"/Applications/VLC.app/Contents/MacOS/lib");
+				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(), "/Applications/VLC.app/Contents/MacOS/lib");
 				Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
 			} else if (System.getProperty("os.name").startsWith("Windows 8") || System.getProperty("os.name").startsWith("Windows 7")) {
 				System.out.println("Found Windows 7/8");
 				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(), "C:\\Program Files\\VideoLAN\\VLC");
-			    Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
+				Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
 			} else if (System.getProperty("os.name").startsWith("Windows")) {
 				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(), "C:\\Program Files (x86)\\VideoLAN\\VLC﻿");
-			    Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
+				Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
 			} else {
 				Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
 			}
@@ -66,7 +66,7 @@ public class Fling {
 				System.out.println("VLC not available");
 			}
 		}
-		
+
 		EventQueue.invokeLater(new Runnable() {
 			@Override
 			public void run() {
@@ -79,17 +79,22 @@ public class Fling {
 	 * Create the main window frame
 	 */
 	public static void createAndShowGUI() {
+		Log.d(LOG_TAG, "set to system default LaF");
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (Exception ex) {
+			System.out.println("Cannot find system look and feel, setting to metal.");
+		}
 		Log.d(LOG_TAG, "createAndShowGUI");
 		flingFrame = new FlingFrame();
 		// change the default app icon; might not work for all platforms
-		URL url = ClassLoader
-				.getSystemResource("com/entertailion/java/fling/resources/logo.png");
+		URL url = ClassLoader.getSystemResource("com/entertailion/java/fling/resources/logo.png");
 		Toolkit kit = Toolkit.getDefaultToolkit();
 		Image img = kit.createImage(url);
 		flingFrame.setIconImage(img);
 		flingFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		flingFrame.setSize(420, 250);
-		//flingFrame.setSize(420, 300);   // with scrubber
+		// /flingFrame.setSize(420, 300); // with scrubber
 		flingFrame.setLocationRelativeTo(null);
 		flingFrame.setVisible(true);
 	}

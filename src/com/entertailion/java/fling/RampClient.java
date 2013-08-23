@@ -444,6 +444,17 @@ public class RampClient implements RampWebSocketListener {
 
 		// ["cv",{"type":"activity","message":{"type":"timeupdate","activityId":"d82cede3-ec23-4f73-8abc-343dd9ca6dbb","state":{"mediaUrl":"http://192.168.0.50:8087/cast.webm","videoUrl":"http://192.168.0.50:8087/cast.webm","currentTime":20.985000610351562,"duration":null,"pause":false,"muted":false,"volume":1,"paused":false}}}]
 		// Should really parse JSON, but only need the current time
+		if (flingFrame.getDuration() == 0) {
+			int start = message.indexOf("\"duration\":");
+			if (start > 0) {
+				int end = message.indexOf(",", start);
+				String time = message.substring(start + 11, end);
+				Log.d(LOG_TAG, "duration=" + time);
+				if (!time.equals("null")) {
+					flingFrame.setDuration((int) Float.parseFloat(time));
+				}
+			}
+		}
 		int start = message.indexOf("\"currentTime\":");
 		if (start > 0) {
 			int end = message.indexOf(",", start);
@@ -507,6 +518,13 @@ public class RampClient implements RampWebSocketListener {
 	public void play() {
 		if (rampWebSocketClient != null) {
 			rampWebSocketClient.send("[\"ramp\",{\"type\":\"PLAY\", \"cmd_id\":" + commandId + "}]");
+			commandId++;
+		}
+	}
+
+	public void play(int position) {
+		if (rampWebSocketClient != null) {
+			rampWebSocketClient.send("[\"ramp\",{\"type\":\"PLAY\", \"cmd_id\":" + commandId + ", \"position\":" + position + "}]");
 			commandId++;
 		}
 	}
