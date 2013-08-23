@@ -18,6 +18,7 @@ import java.net.URL;
 
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
+import javax.swing.UIManager;
 
 import uk.co.caprica.vlcj.runtime.RuntimeUtil;
 
@@ -82,7 +83,7 @@ public class Fling {
 		Log.d(LOG_TAG, "set to system default LaF");
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} catch (Exception ex) {
+		} catch(Exception ex) {
 			System.out.println("Cannot find system look and feel, setting to metal.");
 		}
 		Log.d(LOG_TAG, "createAndShowGUI");
