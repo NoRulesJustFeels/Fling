@@ -24,7 +24,7 @@ to configure the <a href="http://www.videolan.org/doc/streaming-howto/en/ch03.ht
 <b>Note that converting video is very CPU intensive. It might take several seconds for the video to start playing on your ChromeCast device</b>.
 </p>
 
-<p>There are basic playback controls to play, pause and stop the video (pause and stop behaves the same). The playback slider/scrubber control only does not work for transcoded video.</p>
+<p>There are basic playback controls to play, pause and stop the video (pause and stop behaves the same). The playback slider/scrubber control does not work for transcoded video.</p>
 
 <p>The computer running the Fling application needs to be on the same network as the ChromeCast device. 
 To play the video, a web server is created on port 8080 on your computer and you might have to configure your firewall to allow incoming connections to access the video.</p>
