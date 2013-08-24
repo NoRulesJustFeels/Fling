@@ -51,7 +51,10 @@ public class Fling {
 				Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
 			} else if (System.getProperty("os.name").startsWith("Windows 8") || System.getProperty("os.name").startsWith("Windows 7")) {
 				System.out.println("Found Windows 7/8");
-				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(), "C:\\Program Files\\VideoLAN\\VLC");
+				String path = System.getProperty("os.arch").contains("64") ?
+						"C:\\Program Files\\VideoLAN\\VLC" :
+						"C:\\Program Files (x86)\\VideoLAN\\VLC";
+				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(), path);
 				Native.loadLibrary(RuntimeUtil.getLibVlcLibraryName(), uk.co.caprica.vlcj.binding.LibVlc.class);
 			} else if (System.getProperty("os.name").startsWith("Windows")) {
 				NativeLibrary.addSearchPath(RuntimeUtil.getLibVlcLibraryName(), "C:\\Program Files (x86)\\VideoLAN\\VLC﻿");
