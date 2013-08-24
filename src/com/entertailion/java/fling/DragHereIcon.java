@@ -56,14 +56,12 @@ public class DragHereIcon implements Icon {
 	@Override
 	public void paintIcon(Component c, Graphics g, int x, int y) {
 		Graphics2D g2 = (Graphics2D) g.create();
-		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-				RenderingHints.VALUE_ANTIALIAS_ON);
+		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g2.translate(x, y);
 
 		g2.setStroke(new BasicStroke(a));
 		g2.setPaint(linec);
-		g2.draw(new RoundRectangle2D.Float(a, a, size - 2 * a - 1, size - 2 * a
-				- 1, r, r));
+		g2.draw(new RoundRectangle2D.Float(a, a, size - 2 * a - 1, size - 2 * a - 1, r, r));
 
 		// draw bounding box
 		g2.setStroke(new BasicStroke(b));
@@ -78,10 +76,8 @@ public class DragHereIcon implements Icon {
 		// draw arrow
 		g2.setPaint(linec);
 		Rectangle2D b = s.getBounds();
-		Point2D.Double p = new Point2D.Double(b.getX() + b.getWidth() / 2d,
-				b.getY() + b.getHeight() / 2d);
-		AffineTransform toCenterAT = AffineTransform.getTranslateInstance(size
-				/ 2d - p.getX(), size / 2d - p.getY());
+		Point2D.Double p = new Point2D.Double(b.getX() + b.getWidth() / 2d, b.getY() + b.getHeight() / 2d);
+		AffineTransform toCenterAT = AffineTransform.getTranslateInstance(size / 2d - p.getX(), size / 2d - p.getY());
 		g2.fill(toCenterAT.createTransformedShape(s));
 		g2.translate(-x, -y);
 		g2.dispose();
@@ -121,8 +117,7 @@ public class DragHereIcon implements Icon {
 						String file = files[0].getCanonicalPath();
 						Log.d(LOG_TAG, file);
 						Properties systemProperties = System.getProperties();
-						systemProperties.setProperty(
-								EmbeddedServer.CURRENT_FILE, file);
+						systemProperties.setProperty(EmbeddedServer.CURRENT_FILE, file); // EmbeddedServer.serveFile
 
 						flingFrame.sendMediaUrl(file);
 					} catch (IOException e) {

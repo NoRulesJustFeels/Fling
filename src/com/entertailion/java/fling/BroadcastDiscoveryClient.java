@@ -47,7 +47,7 @@ public class BroadcastDiscoveryClient implements Runnable {
 	/**
 	 * Frequency of probe messages.
 	 */
-	private static final int PROBE_INTERVAL_MS = 6000;
+	public static final int PROBE_INTERVAL_MS = 15000;
 	private static final int PROBE_INTERVAL_MS_MAX = 60000;
 
 	private static final String SEARCH_TARGET = "urn:dial-multiscreen-org:service:dial:1";
