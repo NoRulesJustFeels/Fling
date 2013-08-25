@@ -36,7 +36,7 @@ import com.sun.jna.NativeLibrary;
 public class Fling {
 	private static final String LOG_TAG = "Fling";
 	
-	public static final String VERSION = "0.2";
+	public static final String VERSION = "0.3";
 	
 	private static FlingFrame flingFrame;
 
@@ -50,6 +50,7 @@ public class Fling {
 	 * @param args
 	 */
 	public static void main(String[] args) {
+		Log.d(LOG_TAG, "Fling version "+VERSION);
 		// VLC wrapper for Java:
 		// http://www.capricasoftware.co.uk/projects/vlcj/index.html
 		try {

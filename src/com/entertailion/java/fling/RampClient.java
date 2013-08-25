@@ -563,6 +563,14 @@ public class RampClient implements RampWebSocketListener {
 			commandId++;
 		}
 	}
+	
+	public void volume(float value) {
+		if (rampWebSocketClient != null) {
+			// ["ramp",{"volume":0.5,"type":"VOLUME","cmd_id":6}]
+			rampWebSocketClient.send("[\"ramp\",{\"type\":\"VOLUME\", \"cmd_id\":" + commandId + ", \"volume\":"+value+"}]");
+			commandId++;
+		}
+	}
 
 	// Web socket status
 	public boolean isStarted() {

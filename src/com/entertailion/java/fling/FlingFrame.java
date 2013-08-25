@@ -12,7 +12,14 @@
 package com.entertailion.java.fling;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
@@ -29,6 +36,7 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -56,6 +64,7 @@ import javax.swing.JSlider;
 import javax.swing.JTextField;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.plaf.basic.BasicSliderUI;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
@@ -89,13 +98,16 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	private static final String TRANSCODING_PARAMETERS = "vcodec=VP80,vb=1000,vfilter=canvas{width=640,height=360},acodec=vorb,ab=128,channels=2,samplerate=44100,threads=2";
 	private static final String PROPERTY_TRANSCODING_EXTENSIONS = "transcoding.extensions";
 	private static final String PROPERTY_TRANSCODING_PARAMETERS = "transcoding.parameters";
+	private static final String PROPERTY_MANUAL_SERVERS = "manual.servers";
 	private int port = EmbeddedServer.HTTP_PORT;
 	private List<DialServer> servers = new ArrayList<DialServer>();
+	private List<DialServer> manualServers = new ArrayList<DialServer>();
 	private JComboBox deviceList;
 	private JDialog progressDialog;
 	private JButton refreshButton, playButton, pauseButton, stopButton, settingsButton;
 	private JLabel label;
 	private JSlider scrubber;
+	private JSlider volume;
 	private ResourceBundle resourceBundle;
 	private EmbeddedServer embeddedServer;
 
@@ -174,6 +186,85 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 				fieldPanel.add(transcodingExtensions);
 				labelPanel.add(new JLabel(resourceBundle.getString("transcoding.parameters"), JLabel.RIGHT));
 				fieldPanel.add(transcodingParameters);
+				labelPanel.add(new JLabel(resourceBundle.getString("device.manual"), JLabel.RIGHT));
+				JPanel devicePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+				final JComboBox manualDeviceList = new JComboBox();
+				if (manualServers.size() == 0) {
+					manualDeviceList.setVisible(false);
+				} else {
+					for (DialServer dialServer : manualServers) {
+						manualDeviceList.addItem(dialServer);
+					}
+				}
+				devicePanel.add(manualDeviceList);
+				JButton addButton = new JButton(resourceBundle.getString("device.manual.add"));
+				addButton.setToolTipText(resourceBundle.getString("device.manual.add.tooltip"));
+				addButton.addActionListener(new ActionListener() {
+
+					public void actionPerformed(ActionEvent e) {
+						JTextField name = new JTextField();
+						JTextField ipAddress = new JTextField();
+						Object[] message = { resourceBundle.getString("device.manual.name") + ":", name,
+								resourceBundle.getString("device.manual.ipaddress") + ":", ipAddress };
+
+						int option = JOptionPane.showConfirmDialog(null, message, resourceBundle.getString("device.manual"), JOptionPane.OK_CANCEL_OPTION);
+						if (option == JOptionPane.OK_OPTION) {
+							try {
+								manualServers.add(new DialServer(name.getText(), InetAddress.getByName(ipAddress.getText())));
+
+								Object selected = deviceList.getSelectedItem();
+								int selectedIndex = deviceList.getSelectedIndex();
+								deviceList.removeAllItems();
+								deviceList.addItem(resourceBundle.getString("devices.select"));
+								for (DialServer dialServer : servers) {
+									deviceList.addItem(dialServer);
+								}
+								for (DialServer dialServer : manualServers) {
+									deviceList.addItem(dialServer);
+								}
+								deviceList.invalidate();
+								if (selectedIndex > 0) {
+									deviceList.setSelectedItem(selected);
+								} else {
+									if (deviceList.getItemCount() == 2) {
+										// Automatically select single device
+										deviceList.setSelectedIndex(1);
+									}
+								}
+
+								manualDeviceList.removeAllItems();
+								for (DialServer dialServer : manualServers) {
+									manualDeviceList.addItem(dialServer);
+								}
+								manualDeviceList.setVisible(true);
+								storeProperties();
+							} catch (UnknownHostException e1) {
+								Log.e(LOG_TAG, "manual IP address", e1);
+
+								JOptionPane.showMessageDialog(FlingFrame.this, resourceBundle.getString("device.manual.invalidip"));
+							}
+						}
+					}
+				});
+				devicePanel.add(addButton);
+				JButton removeButton = new JButton(resourceBundle.getString("device.manual.remove"));
+				removeButton.setToolTipText(resourceBundle.getString("device.manual.remove.tooltip"));
+				removeButton.addActionListener(new ActionListener() {
+
+					public void actionPerformed(ActionEvent e) {
+						Object selected = manualDeviceList.getSelectedItem();
+						manualDeviceList.removeItem(selected);
+						if (manualDeviceList.getItemCount() == 0) {
+							manualDeviceList.setVisible(false);
+						}
+						deviceList.removeItem(selected);
+						deviceList.invalidate();
+						manualServers.remove(selected);
+						storeProperties();
+					}
+				});
+				devicePanel.add(removeButton);
+				fieldPanel.add(devicePanel);
 				int result = JOptionPane.showConfirmDialog(FlingFrame.this, myPanel, resourceBundle.getString("settings.title"), JOptionPane.OK_CANCEL_OPTION);
 				if (result == JOptionPane.OK_OPTION) {
 					transcodingParameterValues = transcodingParameters.getText();
@@ -185,9 +276,32 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		settingsButton.setToolTipText(resourceBundle.getString("settings.title"));
 		devicePane.add(settingsButton);
 		listPane.add(devicePane);
+
+		// TODO
+		volume = new JSlider(JSlider.HORIZONTAL, 0, 100, 0);
+		volume.setUI(new MySliderUI(volume));
+		volume.setMajorTickSpacing(25);
+		// volume.setMinorTickSpacing(5);
+		volume.setPaintTicks(true);
+		volume.setEnabled(true);
+		volume.setValue(100);
+		volume.setToolTipText(resourceBundle.getString("volume.title"));
+		volume.addChangeListener(new ChangeListener() {
+
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				JSlider source = (JSlider) e.getSource();
+				if (!source.getValueIsAdjusting()) {
+					int position = (int) source.getValue();
+					rampClient.volume(position / 100.0f);
+				}
+			}
+			
+		});
+		//listPane.add(volume);
+
 		listPane.add(DragHereIcon.makeUI(this));
 
-		// TODO scrubber for playback control
 		scrubber = new JSlider(JSlider.HORIZONTAL, 0, 100, 0);
 		scrubber.addChangeListener(this);
 		scrubber.setMajorTickSpacing(25);
@@ -240,6 +354,44 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		createProgressDialog();
 		startWebserver();
 		discoverDevices();
+	}
+
+	// http://stackoverflow.com/questions/6992633/painting-the-slider-icon-of-jslider
+	private static class MySliderUI extends BasicSliderUI {
+
+		private Font font = new Font(Font.SERIF, Font.PLAIN, 12);
+
+		public MySliderUI(JSlider slider) {
+			super(slider);
+		}
+
+		@Override
+		public void paintTrack(Graphics g) {
+			Graphics2D g2d = (Graphics2D) g;
+			Rectangle t = trackRect;
+			g.setColor(Color.darkGray);
+			g.drawRect(t.x, t.y, t.width, t.height);
+
+			if (g instanceof Graphics2D) {
+				Graphics2D g2 = (Graphics2D) g;
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				g2d.setFont(font);
+				int w2 = slider.getFontMetrics(font).stringWidth("Volume") / 2;
+				g2.drawString("Volume", t.width / 2 - w2, t.height);
+			}
+		}
+
+		@Override
+		public void paintThumb(Graphics g) {
+			Graphics2D g2d = (Graphics2D) g;
+			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			Rectangle t = thumbRect;
+			g2d.setColor(Color.black);
+			int tw2 = t.width / 2;
+			g2d.drawLine(t.x, t.y, t.x + t.width - 1, t.y);
+			g2d.drawLine(t.x, t.y, t.x + tw2, t.y + t.height);
+			g2d.drawLine(t.x + t.width - 1, t.y, t.x + tw2, t.y + t.height);
+		}
 	}
 
 	public void stateChanged(ChangeEvent e) {
@@ -311,19 +463,22 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 					hideProgressDialog();
 
 					Log.d(LOG_TAG, "size=" + trackedServers.size());
-					if (trackedServers.size() > 0) {
-						for (DialServer dialServer : trackedServers) {
-							deviceList.addItem(dialServer);
-							servers.add(dialServer);
-						}
-						deviceList.invalidate();
+					for (DialServer dialServer : trackedServers) {
+						deviceList.addItem(dialServer);
+						servers.add(dialServer);
+					}
 
-						// Automatically select single device
-						if (trackedServers.size() == 1) {
-							deviceList.setSelectedIndex(1);
-						}
-					} else {
+					// Now add user's manual servers
+					for (DialServer dialServer : manualServers) {
+						deviceList.addItem(dialServer);
+					}
+					deviceList.invalidate();
+
+					if (deviceList.getItemCount() == 1) {
 						JOptionPane.showMessageDialog(FlingFrame.this, resourceBundle.getString("device.notfound"));
+					} else if (deviceList.getItemCount() == 2) {
+						// Automatically select single device
+						deviceList.setSelectedIndex(1);
 					}
 
 				} catch (InterruptedException e) {
@@ -389,7 +544,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 				NetworkInterface iface = list.nextElement();
 				if (iface == null)
 					continue;
-				Log.d(LOG_TAG, "interface="+iface.getName());
+				Log.d(LOG_TAG, "interface=" + iface.getName());
 				Iterator<InterfaceAddress> it = iface.getInterfaceAddresses().iterator();
 				while (it.hasNext()) {
 					InterfaceAddress interfaceAddress = it.next();
@@ -398,7 +553,8 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 					InetAddress address = interfaceAddress.getAddress();
 					Log.d(LOG_TAG, "address=" + address);
 					if (address instanceof Inet4Address) {
-						// Only pick an interface that is likely to be on the same subnet as the selected ChromeCast device
+						// Only pick an interface that is likely to be on the
+						// same subnet as the selected ChromeCast device
 						if (address.getHostAddress().toString().startsWith(prefix)) {
 							return interfaceAddress;
 						}
@@ -554,7 +710,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 									while (!rampClient.isStarted() && !rampClient.isClosed()) {
 										try {
 											// make less than 3 second ping time
-											Thread.sleep(500); 
+											Thread.sleep(500);
 										} catch (InterruptedException e) {
 										}
 									}
@@ -578,6 +734,12 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 				}
 			} else {
 				vlcTranscode(file);
+			}
+			
+			// TODO
+			if (!volume.getValueIsAdjusting()) {
+				int position = (int) volume.getValue();
+				//rampClient.volume(position / 100.0f);
 			}
 		}
 	}
@@ -698,6 +860,13 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 			prop.load(new FileInputStream("config.properties"));
 			transcodingParameterValues = prop.getProperty(PROPERTY_TRANSCODING_PARAMETERS);
 			transcodingExtensionValues = prop.getProperty(PROPERTY_TRANSCODING_EXTENSIONS);
+			String manual = prop.getProperty(PROPERTY_MANUAL_SERVERS);
+			if (manual != null) {
+				String[] parts = manual.split(":");
+				for (int i = 0; i < parts.length / 2; i++) {
+					manualServers.add(new DialServer(parts[i * 2], InetAddress.getByName(parts[i * 2 + 1])));
+				}
+			}
 		} catch (Exception ex) {
 		}
 		if (transcodingParameterValues == null) {
@@ -715,6 +884,14 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		try {
 			prop.setProperty(PROPERTY_TRANSCODING_PARAMETERS, transcodingParameterValues);
 			prop.setProperty(PROPERTY_TRANSCODING_EXTENSIONS, transcodingExtensionValues);
+			String manual = "";
+			for (DialServer dialServer : manualServers) {
+				if (manual.length() > 0) {
+					manual = manual + ":";
+				}
+				manual = manual + dialServer.getFriendlyName() + ":" + dialServer.getIpAddress().getHostAddress();
+			}
+			prop.setProperty(PROPERTY_MANUAL_SERVERS, manual);
 			prop.store(new FileOutputStream("config.properties"), null);
 		} catch (Exception ex) {
 		}

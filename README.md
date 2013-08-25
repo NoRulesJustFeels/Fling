@@ -7,7 +7,7 @@ Fling
 
 <p>To run the application, you need a <a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">Java runtime environment (JRE)</a> for your operating system. </p>
 
-<p>Download the latest version of the app: <a href="http://goo.gl/HAc9ex">fling.jar</a></p>
+<p>Download the latest version 0.3 of the app: <a href="http://goo.gl/HAc9ex">fling.jar</a></p>
 
 <p>There is no longer a dependency on a web app that needs to be <a href="https://developers.google.com/cast/whitelisting#whitelist-receiver">registered with Google</a>; that has been eliminated by using the public ChromeCast app receiver.</p>
 

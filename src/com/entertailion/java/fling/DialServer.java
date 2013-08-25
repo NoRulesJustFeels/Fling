@@ -29,8 +29,13 @@ public class DialServer {
 	private String uuid;
 	private String manufacturer;
 	private String modelName;
-
+	
 	public DialServer() {
+		
+	}
+
+	public DialServer(String friendlyName, InetAddress ipAddress) {
+		this("http://"+ipAddress.getHostAddress()+":8008/ssdp/device-desc.xml", ipAddress, 8008, "http://"+ipAddress.getHostAddress()+":8008/apps/", friendlyName, "uuid:74842a31-3226-1429-5dfb-29d6443e5695", "Google Inc.", "Eureka Dongle");
 	}
 
 	public DialServer(String location, InetAddress ipAddress, int port, String appsUrl, String friendlyName, String uuid, String manufacturer, String modelName) {
