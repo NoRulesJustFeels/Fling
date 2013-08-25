@@ -7,9 +7,11 @@ Fling
 
 <p>To run the application, you need a <a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">Java runtime environment (JRE)</a> for your operating system. </p>
 
-<p>Download the latest version 0.3 of the app: <a href="http://goo.gl/HAc9ex">fling.jar</a></p>
+<!--p>Download the latest version 0.3 of the app: <a href="http://goo.gl/HAc9ex">fling.jar</a></p-->
 
-<p>There is no longer a dependency on a web app that needs to be <a href="https://developers.google.com/cast/whitelisting#whitelist-receiver">registered with Google</a>; that has been eliminated by using the public ChromeCast app receiver.</p>
+<p><b>Fling no longer works for the public since the public ChromeCast app receiver no longer allows video playback.</b></p>
+
+<p>There is a dependency on a web app that needs to be <a href="https://developers.google.com/cast/whitelisting#whitelist-receiver">registered with Google</a>.</p>
 
 <p>When the application starts, it will search for ChromeCast devices on your local network. Select the device that you want to beam the videos to.
 Then drag-and-drop a video file onto the application to beam it to the ChromeCast device.</p>
