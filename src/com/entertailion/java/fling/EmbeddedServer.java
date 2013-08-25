@@ -39,6 +39,17 @@ public class EmbeddedServer extends HttpServer {
 			Properties parms, Properties files) {
 		try {
 			Log.d(LOG_TAG, method + " '" + uri + "' ");
+			
+			/* TODO
+			if ("POST".equalsIgnoreCase(method)){
+				Log.d(LOG_TAG, "A POST is received");
+				Log.d(LOG_TAG, "action Param is:" + parms.getProperty("action"));
+				return new Response("200", "text/plain", "Ok");
+			} else if ("GET".equalsIgnoreCase(method)){
+				String action = parms.getProperty("action");
+				return new Response("200", "text/plain", "OK");
+			}
+			*/
 
 			return serveFile(uri, header, new File("."), true, parms);
 		} catch (Throwable e) {

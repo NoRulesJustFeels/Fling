@@ -29,13 +29,16 @@ public class DialServer {
 	private String uuid;
 	private String manufacturer;
 	private String modelName;
-
+	
 	public DialServer() {
+		
 	}
 
-	public DialServer(String location, InetAddress ipAddress, int port,
-			String appsUrl, String friendlyName, String uuid,
-			String manufacturer, String modelName) {
+	public DialServer(String friendlyName, InetAddress ipAddress) {
+		this("http://"+ipAddress.getHostAddress()+":8008/ssdp/device-desc.xml", ipAddress, 8008, "http://"+ipAddress.getHostAddress()+":8008/apps/", friendlyName, "uuid:74842a31-3226-1429-5dfb-29d6443e5695", "Google Inc.", "Eureka Dongle");
+	}
+
+	public DialServer(String location, InetAddress ipAddress, int port, String appsUrl, String friendlyName, String uuid, String manufacturer, String modelName) {
 		this.location = location;
 		this.ipAddress = ipAddress;
 		this.port = port;
@@ -111,8 +114,7 @@ public class DialServer {
 	}
 
 	public DialServer clone() {
-		return new DialServer(location, ipAddress, port, appsUrl, friendlyName,
-				uuid, manufacturer, modelName);
+		return new DialServer(location, ipAddress, port, appsUrl, friendlyName, uuid, manufacturer, modelName);
 	}
 
 	@Override
@@ -124,8 +126,7 @@ public class DialServer {
 			return false;
 		}
 		DialServer that = (DialServer) obj;
-		return equal(this.ipAddress, that.ipAddress)
-				&& (this.port == that.port);
+		return equal(this.ipAddress, that.ipAddress) && (this.port == that.port);
 	}
 
 	private static <T> boolean equal(T obj1, T obj2) {
@@ -137,7 +138,7 @@ public class DialServer {
 
 	@Override
 	public String toString() {
-		return getFriendlyName() + " / " + getIpAddress().getHostName();
+		return getFriendlyName() + " / " + getIpAddress().getHostAddress();
 	}
 
 }
