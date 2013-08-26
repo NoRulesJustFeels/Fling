@@ -35,9 +35,9 @@ import com.sun.jna.NativeLibrary;
  */
 public class Fling {
 	private static final String LOG_TAG = "Fling";
-	
-	public static final String VERSION = "0.3";
-	
+
+	public static final String VERSION = "0.4";
+
 	private static FlingFrame flingFrame;
 
 	private static final String VLC_MAC = "/Applications/VLC.app/Contents/MacOS/lib";
@@ -50,7 +50,7 @@ public class Fling {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		Log.d(LOG_TAG, "Fling version "+VERSION);
+		Log.d(LOG_TAG, "Fling version " + VERSION);
 		// VLC wrapper for Java:
 		// http://www.capricasoftware.co.uk/projects/vlcj/index.html
 		try {
@@ -112,7 +112,7 @@ public class Fling {
 		flingFrame.setIconImage(img);
 		flingFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		// flingFrame.setSize(420, 250);
-		flingFrame.setSize(420, 300); // with scrubber
+		flingFrame.setSize(420, 275); // with scrubber
 		flingFrame.setLocationRelativeTo(null);
 		flingFrame.setVisible(true);
 	}

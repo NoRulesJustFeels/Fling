@@ -35,6 +35,7 @@ import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 import org.java_websocket.handshake.ServerHandshake;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.xml.sax.InputSource;
@@ -51,6 +52,15 @@ public class RampClient implements RampWebSocketListener {
 
 	private static final String STATE_RUNNING = "running";
 	private static final String STATE_STOPPED = "stopped";
+
+	private static final String PROTOCOL_CM = "cm";
+	private static final String PROTOCOL_RAMP = "ramp";
+	private static final String TYPE = "type";
+	private static final String PING = "ping";
+	private static final String PONG = "pong";
+	private static final String STATUS = "STATUS";
+	private static final String RESPONSE = "RESPONSE";
+	private static final String RESPONSE_STATUS = "status";
 
 	private static final String HEADER_CONNECTION = "Connection";
 	private static final String HEADER_CONNECTION_VALUE = "keep-alive";
@@ -76,14 +86,17 @@ public class RampClient implements RampWebSocketListener {
 	private String response;
 	private boolean started;
 	private boolean closed;
+	private boolean doPlay;
 
 	private RampWebSocketClient rampWebSocketClient;
-	private int commandId;
+	private int commandId = 1;
 	private String app;
 	private String activityId;
 	private String senderId;
+	private boolean isChromeCast;
+	private boolean gotStatus;
 
-	private Thread pongThread;
+	private Thread infoThread;
 	private DialServer dialServer;
 	private FlingFrame flingFrame;
 
@@ -94,6 +107,7 @@ public class RampClient implements RampWebSocketListener {
 
 	public void launchApp(String app, DialServer dialServer) {
 		this.app = app;
+		this.isChromeCast = app.equals(FlingFrame.CHROMECAST);
 		this.dialServer = dialServer;
 		this.activityId = UUID.randomUUID().toString();
 		try {
@@ -178,7 +192,7 @@ public class RampClient implements RampWebSocketListener {
 			httpPost.setHeader(HEADER_ACCEPT, HEADER_ACCEPT_VALUE);
 			httpPost.setHeader(HEADER_ACCEPT_LANGUAGE, HEADER_ACCEPT_LANGUAGE_VALUE);
 			httpPost.setHeader(HEADER_CONTENT_TYPE, HEADER_CONTENT_TYPE_TEXT_VALUE);
-			if (app.equals(FlingFrame.CHROMECAST)) {
+			if (isChromeCast) {
 				httpPost.setEntity(new StringEntity("v=release-d4fa0a24f89ec5ba83f7bf3324282c8d046bf612&id=local%3A1&idle=windowclose"));
 			}
 
@@ -272,6 +286,7 @@ public class RampClient implements RampWebSocketListener {
 			// to control media playback
 			this.started = false;
 			this.closed = false;
+			this.gotStatus = false;
 			if (webSocketAddress != null) {
 				// https://github.com/TooTallNate/Java-WebSocket
 				URI uri = URI.create(webSocketAddress);
@@ -439,28 +454,57 @@ public class RampClient implements RampWebSocketListener {
 	public void onMessage(String message) {
 		Log.d(LOG_TAG, "onMessage: message" + message);
 
-		// TODO only respond based on interval
-		// rampWebSocketClient.send("[\"cm\",{\"type\":\"pong\"}]");
-
-		// ["cv",{"type":"activity","message":{"type":"timeupdate","activityId":"d82cede3-ec23-4f73-8abc-343dd9ca6dbb","state":{"mediaUrl":"http://192.168.0.50:8087/cast.webm","videoUrl":"http://192.168.0.50:8087/cast.webm","currentTime":20.985000610351562,"duration":null,"pause":false,"muted":false,"volume":1,"paused":false}}}]
-		// Should really parse JSON, but only need the current time
-		if (flingFrame.getDuration() == 0) {
-			int start = message.indexOf("\"duration\":");
-			if (start > 0) {
-				int end = message.indexOf(",", start);
-				String time = message.substring(start + 11, end);
-				Log.d(LOG_TAG, "duration=" + time);
-				if (!time.equals("null")) {
-					flingFrame.setDuration((int) Float.parseFloat(time));
+		// http://code.google.com/p/json-simple/
+		JSONParser parser = new JSONParser();
+		try {
+			Object obj = parser.parse(new StringReader(message));
+			JSONArray array = (JSONArray) obj;
+			if (array.get(0).equals(PROTOCOL_CM)) {
+				Log.d(LOG_TAG, PROTOCOL_CM);
+				JSONObject body = (JSONObject) array.get(1);
+				// ["cm",{"type":"ping"}]
+				if (body.get(TYPE).equals(PING)) {
+					rampWebSocketClient.send("[\"cm\",{\"type\":\"pong\"}]");
+				}
+			} else if (array.get(0).equals(PROTOCOL_RAMP)) {
+				// ["ramp",{"cmd_id":0,"type":"STATUS","status":{"event_sequence":2,"state":0}}]
+				Log.d(LOG_TAG, PROTOCOL_RAMP);
+				JSONObject body = (JSONObject) array.get(1);
+				if (body.get(TYPE).equals(STATUS)) {
+					// Long cmd_id = (Long)body.get("cmd_id");
+					// commandId = cmd_id.intValue();
+					if (!gotStatus) {
+						gotStatus = true;
+						// rampWebSocketClient.send("[\"ramp\",{\"type\":\"LOAD\",\"cmd_id\":"+commandId+",\"autoplay\":true}] ");
+						// commandId++;
+					}
+				} else if (body.get(TYPE).equals(RESPONSE)) {
+					// ["ramp",{"cmd_id":7,"type":"RESPONSE","status":{"event_sequence":38,"state":2,"content_id":"http://192.168.0.50:8080/video.mp4","current_time":6.465110778808594,
+					// "duration":27.37066650390625,"volume":1,"muted":false,"time_progress":true,"title":"Video"}}]
+					JSONObject status = (JSONObject) body.get(RESPONSE_STATUS);
+					if (status.get("current_time") instanceof Double) {
+						Double current_time = (Double) status.get("current_time");
+						Double duration = (Double) status.get("duration");
+						if (duration != null) {
+							flingFrame.setDuration(duration.intValue());
+						}
+						if (current_time != null) {
+							flingFrame.updateTime(current_time.intValue());
+						}
+					} else {
+						Long current_time = (Long) status.get("current_time");
+						Double duration = (Double) status.get("duration");
+						if (duration != null) {
+							flingFrame.setDuration(duration.intValue());
+						}
+						if (current_time != null) {
+							flingFrame.updateTime(current_time.intValue());
+						}
+					}
 				}
 			}
-		}
-		int start = message.indexOf("\"currentTime\":");
-		if (start > 0) {
-			int end = message.indexOf(",", start);
-			String time = message.substring(start + 14, end);
-			Log.d(LOG_TAG, "currentTime=" + time);
-			flingFrame.updateTime((int) Float.parseFloat(time));
+		} catch (Exception e) {
+			Log.e(LOG_TAG, "parse JSON", e);
 		}
 	}
 
@@ -471,7 +515,7 @@ public class RampClient implements RampWebSocketListener {
 		started = false;
 		closed = true;
 
-		pongThread.interrupt();
+		infoThread.interrupt();
 	}
 
 	public void onOpen(ServerHandshake handshake) {
@@ -480,27 +524,29 @@ public class RampClient implements RampWebSocketListener {
 		started = true;
 		closed = false;
 
-		if (pongThread != null) {
-			pongThread.interrupt();
+		if (infoThread != null) {
+			infoThread.interrupt();
 		}
 
-		pongThread = new Thread(new Runnable() {
+		infoThread = new Thread(new Runnable() {
 			public void run() {
 				while (started && !closed) {
 					try {
-						rampWebSocketClient.send("[\"cm\",{\"type\":\"pong\"}]");
+						if (gotStatus) {
+							rampWebSocketClient.send("[\"ramp\",{\"type\":\"INFO\",\"cmd_id\":" + commandId + "}]");
+							commandId++;
+						}
 						try {
-							Thread.sleep(3000); // pong every 3 seconds to keep
-												// the app alive
+							Thread.sleep(1000);
 						} catch (InterruptedException e) {
 						}
 					} catch (Exception e) {
-						Log.e(LOG_TAG, "pongThread", e);
+						Log.e(LOG_TAG, "infoThread", e);
 					}
 				}
 			}
 		});
-		pongThread.start();
+		infoThread.start();
 	}
 
 	public void onClose(int code, String reason, boolean remote) {
@@ -509,7 +555,7 @@ public class RampClient implements RampWebSocketListener {
 		closed = true;
 		started = false;
 
-		pongThread.interrupt();
+		infoThread.interrupt();
 
 		flingFrame.updateTime(0);
 	}
@@ -547,27 +593,34 @@ public class RampClient implements RampWebSocketListener {
 		closeCurrentApp();
 	}
 
-	// Load media
-	public void load(String url) {
+	public void info() {
 		if (rampWebSocketClient != null) {
-			if (app.equals(FlingFrame.CHROMECAST)) {
-				rampWebSocketClient
-						.send("[\"cv\",{\"type\":\"launch_service\",\"message\":{\"action\":\"launch\",\"activityType\":\"video_playback\",\"activityId\":\""
-								+ activityId + "\",\"senderId\":\"" + senderId
-								+ "\",\"receiverId\":\"local:1\",\"disconnectPolicy\":\"continue\",\"initParams\":{\"mediaUrl\":\"" + url
-								+ "\",\"videoUrl\":\"" + url + "\",\"currentTime\":0,\"duration\":0,\"pause\":false,\"muted\":false,\"volume\":1}}}]");
-			} else {
-				rampWebSocketClient.send("[\"ramp\",{\"title\":\"Video\",\"src\":\"" + url + "\",\"type\":\"LOAD\",\"cmd_id\":" + commandId
-						+ ",\"autoplay\":true}]");
-			}
+			rampWebSocketClient.send("[\"ramp\",{\"type\":\"INFO\", \"cmd_id\":" + commandId + "}]");
 			commandId++;
 		}
 	}
-	
+
+	// Load media
+	public void load(String url) {
+		if (rampWebSocketClient != null) {
+			if (isChromeCast) {
+				rampWebSocketClient
+						.send("[\"cv\",{\"type\":\"launch_service\",\"message\":{\"action\":\"launch\",\"activityType\":\"video_playback\",\"activityId\":\""
+								+ activityId + "\",\"senderId\":\"" + senderId
+								+ "\",\"receiverId\":\"local:1\",\"disconnectPolicy\":\"stop\",\"initParams\":{\"mediaUrl\":\"" + url
+								+ "\",\"currentTime\":0,\"duration\":0,\"pause\":false,\"muted\":false,\"volume\":1}}}]");
+			} else {
+				rampWebSocketClient.send("[\"ramp\",{\"title\":\"Video\",\"src\":\"" + url + "\",\"type\":\"LOAD\",\"cmd_id\":" + commandId
+						+ ",\"autoplay\":true}]");
+				commandId++;
+			}
+		}
+	}
+
 	public void volume(float value) {
 		if (rampWebSocketClient != null) {
 			// ["ramp",{"volume":0.5,"type":"VOLUME","cmd_id":6}]
-			rampWebSocketClient.send("[\"ramp\",{\"type\":\"VOLUME\", \"cmd_id\":" + commandId + ", \"volume\":"+value+"}]");
+			rampWebSocketClient.send("[\"ramp\",{\"type\":\"VOLUME\", \"cmd_id\":" + commandId + ", \"volume\":" + value + "}]");
 			commandId++;
 		}
 	}

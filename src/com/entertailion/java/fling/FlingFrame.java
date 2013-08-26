@@ -86,11 +86,10 @@ import uk.co.caprica.vlcj.player.MediaPlayerFactory;
 public class FlingFrame extends JFrame implements ActionListener, BroadcastDiscoveryHandler, ChangeListener, WindowListener {
 	private static final String LOG_TAG = "FlingFrame";
 
-	// TODO Add your own app id here
+	// https://www.gstatic.com/cv/receiver.html?${POST_DATA}
 	public static final String CHROMECAST = "ChromeCast";
-	private static final String APP_ID = CHROMECAST; // use the public receiver;
-														// change to your app id
-														// if Google blocks this
+	// TODO Add your own app id here
+	private static final String APP_ID = "YOUR_APP_ID";
 
 	private static final String HEADER_APPLICATION_URL = "Application-URL";
 	private static final String CHROME_CAST_MODEL_NAME = "Eureka Dongle";
@@ -278,7 +277,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		listPane.add(devicePane);
 
 		// TODO
-		volume = new JSlider(JSlider.HORIZONTAL, 0, 100, 0);
+		volume = new JSlider(JSlider.VERTICAL, 0, 100, 0);
 		volume.setUI(new MySliderUI(volume));
 		volume.setMajorTickSpacing(25);
 		// volume.setMinorTickSpacing(5);
@@ -296,11 +295,13 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 					rampClient.volume(position / 100.0f);
 				}
 			}
-			
-		});
-		//listPane.add(volume);
 
-		listPane.add(DragHereIcon.makeUI(this));
+		});
+		JPanel centerPanel = new JPanel(new BorderLayout());
+		// centerPanel.add(volume, BorderLayout.WEST);
+
+		centerPanel.add(DragHereIcon.makeUI(this), BorderLayout.CENTER);
+		listPane.add(centerPanel);
 
 		scrubber = new JSlider(JSlider.HORIZONTAL, 0, 100, 0);
 		scrubber.addChangeListener(this);
@@ -657,13 +658,6 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 		// when device is selected, attempt to connect
 		if (servers != null && pos > 0) {
 			selectedDialServer = (DialServer) cb.getSelectedItem();
-			if (APP_ID.equals(FlingFrame.CHROMECAST)) {
-				// Don't launch ChromeCast app now; there is a timeout that will
-				// close the app if the media request isn't sent quickly.
-				// Transcoding can take time to be ready to send video.
-			} else {
-				rampClient.launchApp(APP_ID, selectedDialServer);
-			}
 		}
 	}
 
@@ -702,30 +696,26 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 						if (!rampClient.isClosed()) {
 							rampClient.stop();
 						}
-						if (APP_ID.equals(FlingFrame.CHROMECAST)) {
-							rampClient.launchApp(APP_ID, selectedDialServer);
-							// wait for socket to be ready...
-							new Thread(new Runnable() {
-								public void run() {
-									while (!rampClient.isStarted() && !rampClient.isClosed()) {
-										try {
-											// make less than 3 second ping time
-											Thread.sleep(500);
-										} catch (InterruptedException e) {
-										}
-									}
-									if (!rampClient.isClosed()) {
-										try {
-											Thread.sleep(500);
-										} catch (InterruptedException e) {
-										}
-										rampClient.load(url);
+						rampClient.launchApp(APP_ID, selectedDialServer);
+						// wait for socket to be ready...
+						new Thread(new Runnable() {
+							public void run() {
+								while (!rampClient.isStarted() && !rampClient.isClosed()) {
+									try {
+										// make less than 3 second ping time
+										Thread.sleep(500);
+									} catch (InterruptedException e) {
 									}
 								}
-							}).start();
-						} else {
-							rampClient.load(url);
-						}
+								if (!rampClient.isClosed()) {
+									try {
+										Thread.sleep(500);
+									} catch (InterruptedException e) {
+									}
+									rampClient.load(url);
+								}
+							}
+						}).start();
 					} else {
 						Log.d(LOG_TAG, "could not find a network interface");
 					}
@@ -735,11 +725,11 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 			} else {
 				vlcTranscode(file);
 			}
-			
+
 			// TODO
 			if (!volume.getValueIsAdjusting()) {
 				int position = (int) volume.getValue();
-				//rampClient.volume(position / 100.0f);
+				// rampClient.volume(position / 100.0f);
 			}
 		}
 	}
@@ -824,15 +814,14 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 				// http://192.168.0.8:8087/cast.webm
 				final String url = "http://" + address.getHostAddress() + ":" + vlcPort + "/cast.webm";
 				Log.d(LOG_TAG, "url=" + url);
-				if (APP_ID.equals(FlingFrame.CHROMECAST)) {
+				if (true || isChromeCast()) {
 					rampClient.launchApp(APP_ID, selectedDialServer);
 					// wait for socket to be ready...
 					new Thread(new Runnable() {
 						public void run() {
 							while (!rampClient.isStarted() && !rampClient.isClosed()) {
 								try {
-									Thread.sleep(500); // make less than 3
-														// second ping time
+									Thread.sleep(100);
 								} catch (InterruptedException e) {
 								}
 							}
@@ -970,6 +959,10 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	public void windowOpened(WindowEvent arg0) {
 		// TODO Auto-generated method stub
 
+	}
+
+	public boolean isChromeCast() {
+		return APP_ID.equals(FlingFrame.CHROMECAST);
 	}
 
 }

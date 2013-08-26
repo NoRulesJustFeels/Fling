@@ -31,10 +31,11 @@ import org.java_websocket.handshake.ServerHandshake;
  */
 public class RampWebSocketClient extends WebSocketClient {
 
+	private static final String LOG_TAG = "RampWebSocketClient";
+
 	private RampWebSocketListener rampWebSocketListener;
 
-	public RampWebSocketClient(URI uri,
-			RampWebSocketListener rampWebSocketListener) {
+	public RampWebSocketClient(URI uri, RampWebSocketListener rampWebSocketListener) {
 		super(uri, new Draft_17());
 		this.rampWebSocketListener = rampWebSocketListener;
 		WebSocketImpl.DEBUG = true;
@@ -63,6 +64,12 @@ public class RampWebSocketClient extends WebSocketClient {
 	@Override
 	public void onClose(int code, String reason, boolean remote) {
 		rampWebSocketListener.onClose(code, reason, remote);
+	}
+
+	@Override
+	public void send(String message) {
+		Log.d(LOG_TAG, "message=" + message);
+		super.send(message);
 	}
 
 }
