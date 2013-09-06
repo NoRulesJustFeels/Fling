@@ -55,12 +55,21 @@ public class RampClient implements RampWebSocketListener {
 
 	private static final String PROTOCOL_CM = "cm";
 	private static final String PROTOCOL_RAMP = "ramp";
+	private static final String PROTOCOL_CV = "cV";
 	private static final String TYPE = "type";
 	private static final String PING = "ping";
 	private static final String PONG = "pong";
+	private static final String ACTIVITY = "activity";
+	private static final String ACTIVITY_MESSAGE = "message";
+	private static final String ACTIVITY_CURRENT_TIME = "currentTime";
+	private static final String ACTIVITY_DURATION = "duration";
+	private static final String ACTIVITY_STATE = "state";
+	private static final String ACTIVITY_TIME_UPDATE = "timeupdate";
 	private static final String STATUS = "STATUS";
 	private static final String RESPONSE = "RESPONSE";
 	private static final String RESPONSE_STATUS = "status";
+	private static final String RESPONSE_CURRENT_TIME = "current_time";
+	private static final String RESPONSE_DURATION = "duration";
 
 	private static final String HEADER_CONNECTION = "Connection";
 	private static final String HEADER_CONNECTION_VALUE = "keep-alive";
@@ -193,7 +202,8 @@ public class RampClient implements RampWebSocketListener {
 			httpPost.setHeader(HEADER_ACCEPT_LANGUAGE, HEADER_ACCEPT_LANGUAGE_VALUE);
 			httpPost.setHeader(HEADER_CONTENT_TYPE, HEADER_CONTENT_TYPE_TEXT_VALUE);
 			if (isChromeCast) {
-				httpPost.setEntity(new StringEntity("v=release-d4fa0a24f89ec5ba83f7bf3324282c8d046bf612&id=local%3A1&idle=windowclose"));
+				//httpPost.setEntity(new StringEntity("v=release-d4fa0a24f89ec5ba83f7bf3324282c8d046bf612&id=local%3A1&idle=windowclose"));
+				httpPost.setEntity(new StringEntity("v=release-d4fa0a24f89ec5ba83f7bf3324282c8d046bf612&id=local%3A1"));
 			}
 
 			httpResponse = defaultHttpClient.execute(httpPost, localContext);
@@ -482,9 +492,9 @@ public class RampClient implements RampWebSocketListener {
 					// ["ramp",{"cmd_id":7,"type":"RESPONSE","status":{"event_sequence":38,"state":2,"content_id":"http://192.168.0.50:8080/video.mp4","current_time":6.465110778808594,
 					// "duration":27.37066650390625,"volume":1,"muted":false,"time_progress":true,"title":"Video"}}]
 					JSONObject status = (JSONObject) body.get(RESPONSE_STATUS);
-					if (status.get("current_time") instanceof Double) {
-						Double current_time = (Double) status.get("current_time");
-						Double duration = (Double) status.get("duration");
+					if (status.get(RESPONSE_CURRENT_TIME) instanceof Double) {
+						Double current_time = (Double) status.get(RESPONSE_CURRENT_TIME);
+						Double duration = (Double) status.get(RESPONSE_DURATION);
 						if (duration != null) {
 							flingFrame.setDuration(duration.intValue());
 						}
@@ -492,8 +502,8 @@ public class RampClient implements RampWebSocketListener {
 							flingFrame.updateTime(current_time.intValue());
 						}
 					} else {
-						Long current_time = (Long) status.get("current_time");
-						Double duration = (Double) status.get("duration");
+						Long current_time = (Long) status.get(RESPONSE_CURRENT_TIME);
+						Double duration = (Double) status.get(RESPONSE_DURATION);
 						if (duration != null) {
 							flingFrame.setDuration(duration.intValue());
 						}
@@ -501,6 +511,40 @@ public class RampClient implements RampWebSocketListener {
 							flingFrame.updateTime(current_time.intValue());
 						}
 					}
+				}
+			} else if (array.get(0).equals(PROTOCOL_CV)) {  // ChromeCast default receiver events
+				Log.d(LOG_TAG, PROTOCOL_CV);
+				JSONObject body = (JSONObject) array.get(1);
+				if (body.get(TYPE).equals(ACTIVITY)) {
+					// ["cv",{"type":"activity","message":{"type":"timeupdate","activityId":"d82cede3-ec23-4f73-8abc-343dd9ca6dbb","state":{"mediaUrl":"http://192.168.0.50:8087/cast.webm","videoUrl":"http://192.168.0.50:8087/cast.webm",
+					// "currentTime":20.985000610351562,"duration":null,"pause":false,"muted":false,"volume":1,"paused":false}}}]
+					JSONObject activityMessage = (JSONObject) body.get(ACTIVITY_MESSAGE);
+					if (activityMessage!=null) {
+						JSONObject activityMessageType = (JSONObject) activityMessage.get(TYPE);
+						if (activityMessageType.equals(ACTIVITY_TIME_UPDATE)) {
+							JSONObject activityMessageTypeState = (JSONObject) activityMessage.get(ACTIVITY_STATE);
+							if (activityMessageTypeState.get(RESPONSE_CURRENT_TIME) instanceof Double) {
+								Double current_time = (Double) activityMessageTypeState.get(ACTIVITY_CURRENT_TIME);
+								Double duration = (Double) activityMessageTypeState.get(ACTIVITY_DURATION);
+								if (duration != null) {
+									flingFrame.setDuration(duration.intValue());
+								}
+								if (current_time != null) {
+									flingFrame.updateTime(current_time.intValue());
+								}
+							} else {
+								Long current_time = (Long) activityMessageTypeState.get(ACTIVITY_CURRENT_TIME);
+								Double duration = (Double) activityMessageTypeState.get(ACTIVITY_DURATION);
+								if (duration != null) {
+									flingFrame.setDuration(duration.intValue());
+								}
+								if (current_time != null) {
+									flingFrame.updateTime(current_time.intValue());
+								}
+							}
+						}
+					}
+					
 				}
 			}
 		} catch (Exception e) {

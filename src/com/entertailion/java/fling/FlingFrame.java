@@ -89,7 +89,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	// https://www.gstatic.com/cv/receiver.html?${POST_DATA}
 	public static final String CHROMECAST = "ChromeCast";
 	// TODO Add your own app id here
-	private static final String APP_ID = "YOUR_APP_ID";
+	private static final String APP_ID = "YOUR_APP_ID_HERE";
 
 	private static final String HEADER_APPLICATION_URL = "Application-URL";
 	private static final String CHROME_CAST_MODEL_NAME = "Eureka Dongle";
@@ -457,7 +457,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 
 					// wait a while...
 					// TODO do this better
-					Thread.sleep(BroadcastDiscoveryClient.PROBE_INTERVAL_MS);
+					Thread.sleep(BroadcastDiscoveryClient.PROBE_INTERVAL_MS-1);
 
 					broadcastClient.stop();
 
@@ -821,7 +821,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 						public void run() {
 							while (!rampClient.isStarted() && !rampClient.isClosed()) {
 								try {
-									Thread.sleep(100);
+									Thread.sleep(500);
 								} catch (InterruptedException e) {
 								}
 							}

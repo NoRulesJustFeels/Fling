@@ -156,12 +156,14 @@ public class BroadcastDiscoveryClient implements Runnable {
 	 * Sends a single broadcast discovery request.
 	 */
 	private void sendProbe() {
-		try {
-			DatagramPacket packet = makeRequestPacket(mSocket.getLocalPort());
-			mSocket.send(packet);
-		} catch (Throwable e) {
-			Log.e(LOG_TAG, "Exception sending broadcast probe", e);
-			return;
+		if (mSocket!=null && !mSocket.isClosed()) {
+			try {
+				DatagramPacket packet = makeRequestPacket(mSocket.getLocalPort());
+				mSocket.send(packet);
+			} catch (Throwable e) {
+				Log.e(LOG_TAG, "Exception sending broadcast probe", e);
+				return;
+			}
 		}
 	}
 
