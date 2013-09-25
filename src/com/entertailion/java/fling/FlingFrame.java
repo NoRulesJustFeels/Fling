@@ -128,10 +128,11 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	private int duration;
 	private boolean playbackValueIsAdjusting;
 	private boolean isTranscoding;
+	private String appId;
 
-	public FlingFrame() {
+	public FlingFrame(String appId) {
 		super();
-
+		this.appId = appId;
 		rampClient = new RampClient(this);
 
 		addWindowListener(this);
@@ -696,7 +697,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 						if (!rampClient.isClosed()) {
 							rampClient.stop();
 						}
-						rampClient.launchApp(APP_ID, selectedDialServer);
+						rampClient.launchApp(appId==null?APP_ID:appId, selectedDialServer);
 						// wait for socket to be ready...
 						new Thread(new Runnable() {
 							public void run() {
@@ -815,7 +816,7 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 				final String url = "http://" + address.getHostAddress() + ":" + vlcPort + "/cast.webm";
 				Log.d(LOG_TAG, "url=" + url);
 				if (true || isChromeCast()) {
-					rampClient.launchApp(APP_ID, selectedDialServer);
+					rampClient.launchApp(appId==null?APP_ID:appId, selectedDialServer);
 					// wait for socket to be ready...
 					new Thread(new Runnable() {
 						public void run() {
@@ -962,7 +963,8 @@ public class FlingFrame extends JFrame implements ActionListener, BroadcastDisco
 	}
 
 	public boolean isChromeCast() {
-		return APP_ID.equals(FlingFrame.CHROMECAST);
+		String id = appId==null?APP_ID:appId;
+		return id.equals(FlingFrame.CHROMECAST);
 	}
 
 }

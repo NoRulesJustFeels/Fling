@@ -7,7 +7,7 @@ Fling
 
 <p>To run the application, you need a <a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">Java runtime environment (JRE)</a> for your operating system. </p>
 
-<!--p>Download the latest version 0.3 of the app: <a href="http://goo.gl/HAc9ex">fling.jar</a></p-->
+<!--p>Download the latest version 0.3 of the app: <a href="https://dl.dropboxusercontent.com/u/17958951/fling.jar">fling.jar</a></p-->
 
 <p><b>Fling no longer works for the public since the public ChromeCast app receiver no longer allows video playback.</b></p>
 
@@ -31,12 +31,18 @@ to configure the <a href="http://www.videolan.org/doc/streaming-howto/en/ch03.ht
 <p>The computer running the Fling application needs to be on the same network as the ChromeCast device. 
 To play the video, a web server is created on port 8080 on your computer and you might have to configure your firewall to allow incoming connections to access the video.</p>
 
-<p>Note for developers: If you want to use your own receiver, you need to put your own app ID in the FlingFrame.java and receiver index.html files. Also, take a look a the <a href="https://github.com/entertailion/DIAL">DIAL Android app</a> which also discovers ChromeCast devices and supports YouTube videos.</p>
+<p>Note for developers: If you want to use your own receiver, you need to put your own app ID in the FlingFrame.java and receiver index.html files. 
+If you don't want to compile your own version, use this copy of <a href="http://goo.gl/HAc9ex">fling.jar</a> and pass in the app ID as the command-line parameter:
+<blockquote>
+java -jar fling.jar xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+</blockquote>
+</p>
 
 <p>Watch this <a href="http://youtu.be/fehncl0nTAE">video</a> to see the application in action.</p>
 
 <p>Other apps developed by Entertailion:
 <ul>
+<li><a href="https://github.com/entertailion/DIAL">DIAL Android app</a>: Discover ChromeCast devices and supports YouTube videos</li>
 <li><a href="https://play.google.com/store/apps/details?id=com.entertailion.android.tvremote">Able Remote for Google TV</a>: The ultimate Google TV remote</li>
 <li><a href="https://play.google.com/store/apps/details?id=com.entertailion.android.launcher">Open Launcher for Google TV</a>: The ultimate Google TV launcher</li>
 <li><a href="https://play.google.com/store/apps/details?id=com.entertailion.android.overlay">Overlay for Google TV</a>: Live TV effects for Google TV</li>

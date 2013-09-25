@@ -36,13 +36,15 @@ import com.sun.jna.NativeLibrary;
 public class Fling {
 	private static final String LOG_TAG = "Fling";
 
-	public static final String VERSION = "0.5";
+	public static final String VERSION = "0.6";
 
 	private static FlingFrame flingFrame;
 
 	private static final String VLC_MAC = "/Applications/VLC.app/Contents/MacOS/lib";
 	private static final String VLC_WINDOWS1 = "C:\\Program Files\\VideoLAN\\VLC";
 	private static final String VLC_WINDOWS2 = "C:\\Program Files (x86)\\VideoLAN\\VLC﻿";
+	
+	private static String appId = null;
 
 	/**
 	 * Main entry point
@@ -84,6 +86,11 @@ public class Fling {
 				Log.d(LOG_TAG, "VLC not available");
 			}
 		}
+		
+		if (args.length == 1) {
+			appId = args[0];
+			Log.d(LOG_TAG, "App ID: "+appId);
+		}
 
 		EventQueue.invokeLater(new Runnable() {
 			@Override
@@ -104,7 +111,7 @@ public class Fling {
 			System.out.println("Cannot find system look and feel, setting to metal.");
 		}
 		Log.d(LOG_TAG, "createAndShowGUI");
-		flingFrame = new FlingFrame();
+		flingFrame = new FlingFrame(appId);
 		// change the default app icon; might not work for all platforms
 		URL url = ClassLoader.getSystemResource("com/entertailion/java/fling/resources/logo.png");
 		Toolkit kit = Toolkit.getDefaultToolkit();
